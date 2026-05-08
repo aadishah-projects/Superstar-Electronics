@@ -79,41 +79,41 @@ export default function HomePage() {
     <>
       <JsonLd data={getOrganizationSchema()} />
 
-      <section className="page-section overflow-hidden pt-10 sm:pt-14">
-        <Container className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">
+      <section className="page-section overflow-hidden pt-8 sm:pt-14">
+        <Container className="grid gap-6 sm:gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">
           <div className="fade-up">
             <span className="section-kicker">CCTV Shop In Chitwan</span>
-            <h1 className="mt-6 max-w-4xl font-heading text-4xl tracking-tight text-ink sm:text-5xl lg:text-6xl">
+            <h1 className="mt-4 max-w-4xl font-heading text-[2.2rem] leading-tight tracking-tight text-ink sm:mt-6 sm:text-5xl lg:text-6xl">
               CCTV cameras, wireless security, and installation support for
               homes, shops, and offices.
             </h1>
-            <p className="mt-6 max-w-2xl text-base leading-8 copy-muted sm:text-lg">
+            <p className="mt-4 max-w-2xl text-[0.98rem] leading-7 copy-muted sm:mt-6 sm:text-lg sm:leading-8">
               Super Star Electronics supplies Hikvision, EZVIZ, networking
               products, and practical setup support from Narayangarh, Chitwan.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/products" className="action-primary">
-                View Products
-              </Link>
+            <div className="mt-6 flex flex-col gap-2.5 sm:mt-8 sm:flex-row sm:gap-3">
               <a
                 href={buildWhatsAppUrl({ type: "general" })}
                 target="_blank"
                 rel="noreferrer"
-                className="action-accent"
+                className="action-accent w-full sm:w-auto"
               >
                 WhatsApp Us
               </a>
-              <a href={toTelHref(siteConfig.contact.primaryPhone)} className="action-secondary">
+              <Link href="/products" className="action-primary w-full sm:w-auto">
+                View Products
+              </Link>
+              <a href={toTelHref(siteConfig.contact.primaryPhone)} className="action-secondary w-full sm:w-auto">
                 Call Now
               </a>
             </div>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            <div className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-2">
               {offerHighlights.map((item, index) => (
                 <div
                   key={item.title}
-                  className={`surface-card p-5 fade-up ${index === 0 ? "fade-delay-1" : index === 1 ? "fade-delay-2" : "fade-delay-3"}`}
+                  className={`surface-card p-4 sm:p-5 fade-up ${index === 0 ? "fade-delay-1" : index === 1 ? "fade-delay-2" : "fade-delay-3"}`}
                 >
                   <div className="flex items-start gap-3">
                     <IconMark name={item.icon} className="h-11 w-11 shrink-0" />
@@ -127,7 +127,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="surface-card-strong subtle-pattern fade-up fade-delay-1 relative overflow-hidden p-6 sm:p-8">
+          <div className="surface-card-strong subtle-pattern fade-up fade-delay-1 relative overflow-hidden p-5 sm:p-8">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(200,43,43,0.12),transparent_16rem)]" />
             <div className="relative">
               <div className="flex items-start justify-between gap-4">
@@ -135,7 +135,7 @@ export default function HomePage() {
                   <p className="text-sm font-semibold uppercase tracking-[0.22em] text-brand-blue">
                     Popular This Week
                   </p>
-                  <h2 className="mt-3 font-heading text-3xl tracking-tight text-ink">
+                  <h2 className="mt-3 font-heading text-2xl leading-tight tracking-tight text-ink sm:text-3xl">
                     Quick-pick cameras customers ask about first.
                   </h2>
                 </div>
@@ -144,18 +144,18 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              <p className="mt-5 text-sm leading-7 copy-muted sm:text-base">
+              <p className="mt-4 text-sm leading-7 copy-muted sm:mt-5 sm:text-base">
                 A fast starting point for app-based home and shop monitoring.
               </p>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-5 space-y-3 sm:mt-6">
                 {heroWirelessProducts.map((product) => (
                   <CompactProductCard key={`hero-${product.id}`} product={product} />
                 ))}
               </div>
 
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-[1.5rem] border border-line bg-white/90 p-5">
+              <div className="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4">
+                <div className="rounded-[1.2rem] border border-line bg-white/90 p-4 sm:rounded-[1.5rem] sm:p-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-blue">
                     Fast Response
                   </p>
@@ -164,7 +164,7 @@ export default function HomePage() {
                     Easy inquiry flow for prices, recommendations, and installation help.
                   </p>
                 </div>
-                <div className="rounded-[1.5rem] border border-line bg-white/90 p-5">
+                <div className="rounded-[1.2rem] border border-line bg-white/90 p-4 sm:rounded-[1.5rem] sm:p-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-blue">
                     Local Support
                   </p>
@@ -187,12 +187,12 @@ export default function HomePage() {
             description="Shortcuts for the main products customers compare first."
           />
 
-          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-8 grid gap-3 sm:mt-10 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
             {categoryTiles.map((category) => (
               <Link
                 key={category.key}
                 href={`/products#${category.key}`}
-                className="surface-card group p-5 transition hover:-translate-y-1 hover:border-brand-blue"
+                className="surface-card group p-4 sm:p-5 transition hover:-translate-y-1 hover:border-brand-blue"
               >
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -244,9 +244,9 @@ export default function HomePage() {
             description="Customers usually want genuine products, neat installation, fast replies, and support after the sale."
           />
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-8 grid gap-3 sm:mt-10 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {whyChooseUs.map((item) => (
-              <div key={item} className="surface-card p-5 sm:p-6">
+              <div key={item} className="surface-card p-4 sm:p-6">
                 <div className="flex items-start gap-4">
                   <IconMark name="shield" className="h-11 w-11 shrink-0" />
                   <p className="text-base leading-7 text-ink">{item}</p>
@@ -265,14 +265,14 @@ export default function HomePage() {
             description="The service side stays simple: plan, install, support, and keep systems running."
           />
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+          <div className="mt-8 grid gap-4 sm:mt-10 sm:gap-6 lg:grid-cols-3">
             {services.slice(0, 3).map((service) => (
               <ServiceCard key={service.slug} service={service} />
             ))}
           </div>
 
-          <div className="mt-8">
-            <Link href="/services" className="action-primary">
+          <div className="mt-6 sm:mt-8">
+            <Link href="/services" className="action-primary w-full sm:w-auto">
               Explore All Services
             </Link>
           </div>
@@ -281,15 +281,15 @@ export default function HomePage() {
 
       <section className="page-section">
         <Container>
-          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="surface-card p-6 sm:p-8">
+          <div className="grid gap-5 sm:gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="surface-card p-5 sm:p-8">
               <span className="section-kicker">Popular Customer Needs</span>
-              <h2 className="mt-5 font-heading text-3xl tracking-tight text-ink sm:text-4xl">
+              <h2 className="mt-4 font-heading text-2xl leading-tight tracking-tight text-ink sm:mt-5 sm:text-4xl">
                 The setups people ask for most often.
               </h2>
-              <div className="mt-6 space-y-4">
+              <div className="mt-5 space-y-3 sm:mt-6 sm:space-y-4">
                 {customerScenarios.map((scenario) => (
-                  <div key={scenario.title} className="rounded-[1.35rem] border border-line bg-surface-strong p-5">
+                  <div key={scenario.title} className="rounded-[1.15rem] border border-line bg-surface-strong p-4 sm:rounded-[1.35rem] sm:p-5">
                     <p className="font-heading text-xl text-ink">{scenario.title}</p>
                     <p className="mt-2 text-sm leading-7 copy-muted">{scenario.detail}</p>
                   </div>
@@ -302,7 +302,7 @@ export default function HomePage() {
                 <iframe
                   title="Super Star Electronics Industries location map"
                   src={siteConfig.contact.embedMapUrl}
-                  className="h-[320px] w-full border-0"
+                  className="h-64 w-full border-0 sm:h-[320px]"
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                 />
@@ -317,12 +317,12 @@ export default function HomePage() {
                 <p className="mt-3 text-sm leading-7 copy-muted sm:text-base">
                   Use Google Maps for directions, then call ahead if you want to confirm model availability.
                 </p>
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <div className="mt-4 flex flex-col gap-2.5 sm:mt-5 sm:flex-row sm:gap-3">
                   <a
                     href={siteConfig.contact.mapsUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="action-secondary"
+                    className="action-secondary w-full sm:w-auto"
                   >
                     Get Directions
                   </a>
@@ -330,7 +330,7 @@ export default function HomePage() {
                     href={buildWhatsAppUrl({ type: "general" })}
                     target="_blank"
                     rel="noreferrer"
-                    className="action-primary"
+                    className="action-primary w-full sm:w-auto"
                   >
                     Ask On WhatsApp
                   </a>
@@ -341,22 +341,22 @@ export default function HomePage() {
         </Container>
       </section>
 
-      <section className="page-section pt-8">
+      <section className="page-section pt-6 sm:pt-8">
         <Container>
-          <div className="surface-card-strong relative overflow-hidden p-8 sm:p-10">
+          <div className="surface-card-strong relative overflow-hidden p-6 sm:p-10">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(28,60,110,0.12),transparent_20rem)]" />
-            <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div className="relative grid gap-6 sm:gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
               <div>
                 <span className="section-kicker">Request A Quote</span>
-                <h2 className="mt-5 font-heading text-3xl tracking-tight text-ink sm:text-4xl">
+                <h2 className="mt-4 font-heading text-2xl leading-tight tracking-tight text-ink sm:mt-5 sm:text-4xl">
                   Need a CCTV package, site visit, or product recommendation?
                 </h2>
-                <p className="mt-4 max-w-2xl text-base leading-8 copy-muted sm:text-lg">
+                <p className="mt-3 max-w-2xl text-[0.98rem] leading-7 copy-muted sm:mt-4 sm:text-lg sm:leading-8">
                   Send a quick inquiry and we can match products, installation, and budget options for your location.
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3 lg:flex-col">
                 <a
                   href={buildWhatsAppUrl({
                     type: "quote",
@@ -364,7 +364,7 @@ export default function HomePage() {
                   })}
                   target="_blank"
                   rel="noreferrer"
-                  className="action-accent"
+                  className="action-accent w-full sm:w-auto"
                 >
                   Request CCTV Quotation
                 </a>
@@ -372,7 +372,7 @@ export default function HomePage() {
                   href={siteConfig.contact.mapsUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="action-secondary"
+                  className="action-secondary w-full sm:w-auto"
                 >
                   Visit The Shop
                 </a>

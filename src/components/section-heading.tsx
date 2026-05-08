@@ -25,7 +25,7 @@ export function SectionHeading({
       {headingLevel === "h1" ? (
         <h1
           className={cn(
-            "mt-5 font-heading text-3xl tracking-tight text-ink sm:text-4xl",
+            "mt-4 font-heading text-2xl leading-tight tracking-tight text-ink sm:mt-5 sm:text-4xl",
             centered && "mx-auto max-w-3xl",
           )}
         >
@@ -34,7 +34,7 @@ export function SectionHeading({
       ) : (
         <h2
           className={cn(
-            "mt-5 font-heading text-3xl tracking-tight text-ink sm:text-4xl",
+            "mt-4 font-heading text-2xl leading-tight tracking-tight text-ink sm:mt-5 sm:text-4xl",
             centered && "mx-auto max-w-3xl",
           )}
         >
@@ -43,7 +43,7 @@ export function SectionHeading({
       )}
       <p
         className={cn(
-          "mt-4 max-w-3xl text-base leading-8 copy-muted sm:text-lg",
+          "mt-3 max-w-3xl text-[0.98rem] leading-7 copy-muted sm:mt-4 sm:text-lg sm:leading-8",
           centered && "mx-auto",
         )}
       >

@@ -15,9 +15,9 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
       href={buildProductWhatsAppUrl(product)}
       target="_blank"
       rel="noreferrer"
-      className="group flex items-center gap-3 rounded-[1.15rem] border border-line bg-white/94 p-3 transition hover:-translate-y-0.5 hover:border-brand-blue sm:gap-4 sm:rounded-[1.5rem] sm:p-4"
+      className="group flex items-center gap-2.5 rounded-[1rem] border border-line bg-white/94 p-2.5 transition hover:-translate-y-0.5 hover:border-brand-blue sm:gap-4 sm:rounded-[1.5rem] sm:p-4"
     >
-      <div className="relative h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-[1rem] bg-surface-strong sm:h-[5.5rem] sm:w-[5.5rem] sm:rounded-2xl">
+      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[0.85rem] bg-surface-strong sm:h-[5.5rem] sm:w-[5.5rem] sm:rounded-2xl">
         <Image
           src={product.image}
           alt={product.name}
@@ -32,7 +32,7 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
         <p className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-brand-blue sm:text-xs sm:tracking-[0.18em]">
           {product.brand}
         </p>
-        <h3 className="mt-1 line-clamp-2 font-heading text-base leading-5 text-ink transition group-hover:text-brand-blue sm:text-lg sm:leading-6">
+        <h3 className="mt-1 line-clamp-2 font-heading text-[0.96rem] leading-5 text-ink transition group-hover:text-brand-blue sm:text-lg sm:leading-6">
           {product.name}
         </h3>
         {badges.length ? (
@@ -51,7 +51,7 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
             ))}
           </div>
         ) : null}
-        <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="mt-2.5 flex items-center justify-between gap-2">
           <div className="flex items-end gap-2">
             <p className="font-heading text-lg text-brand-red sm:text-xl">{formatNpr(product.price)}</p>
             {product.originalPrice && product.originalPrice > product.price ? (
@@ -59,7 +59,7 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
             ) : null}
           </div>
           <span className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-brand-blue sm:text-xs sm:tracking-[0.18em]">
-            WhatsApp
+            Ask Price
           </span>
         </div>
       </div>

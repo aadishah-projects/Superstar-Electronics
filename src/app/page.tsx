@@ -1,5 +1,5 @@
+import Image from "next/image";
 import Link from "next/link";
-import { BrandStrip } from "@/components/brand-strip";
 import { CompactProductCard } from "@/components/compact-product-card";
 import { Container } from "@/components/container";
 import { HomeProductShowcase } from "@/components/home-product-showcase";
@@ -9,7 +9,8 @@ import { SectionHeading } from "@/components/section-heading";
 import { ServiceCard } from "@/components/service-card";
 import { catalogCategories, getProductsForCategory } from "@/data/catalog";
 import {
-  businessStats,
+  customerScenarios,
+  offerHighlights,
   services,
   siteConfig,
   whyChooseUs,
@@ -17,45 +18,57 @@ import {
 import { buildWhatsAppUrl, toTelHref } from "@/lib/urls";
 import { getOrganizationSchema } from "@/lib/structured-data";
 
-const wirelessHotProducts = getProductsForCategory("wireless-cameras").slice(0, 4);
-const cctvHotProducts = getProductsForCategory("cctv-cameras").slice(0, 4);
+const wirelessHotProducts = getProductsForCategory("wireless-cameras").slice(0, 3);
+const cctvHotProducts = getProductsForCategory("cctv-cameras").slice(0, 3);
 const networkingHotProducts = [
   ...getProductsForCategory("routers-networking").slice(0, 2),
-  ...getProductsForCategory("poe-gigabit-switches").slice(0, 2),
+  ...getProductsForCategory("poe-gigabit-switches").slice(0, 1),
 ];
 const heroWirelessProducts = wirelessHotProducts.slice(0, 3);
 const homeShowcaseSections = [
   {
     key: "wireless",
     label: "Wireless Cameras",
-    title: "Hot wireless cameras for homes, rooms, and storefront monitoring.",
+    title: "Wireless cameras for quick setup, mobile viewing, and everyday monitoring.",
     description:
-      "Smart indoor and outdoor Wi-Fi cameras are one of the fastest-moving product groups. These are great for customers who want simple app-based monitoring and fast setup.",
+      "Great for homes, rooms, gates, and small storefronts where easy app access matters most.",
     href: "/products#wireless-cameras",
     products: wirelessHotProducts,
   },
   {
     key: "cctv",
     label: "CCTV Cameras",
-    title: "Reliable dome and bullet camera picks for core CCTV installations.",
+    title: "Wired CCTV picks for dependable indoor and outdoor coverage.",
     description:
-      "These models are better suited for fixed surveillance coverage in shops, offices, and larger security layouts where wired systems are preferred.",
+      "Better for shops, offices, and larger layouts where fixed recording and stable coverage are a priority.",
     href: "/products#cctv-cameras",
     products: cctvHotProducts,
   },
   {
     key: "networking",
     label: "Networking & Switches",
-    title: "Router and switch products that support smooth connectivity and IP camera setups.",
+    title: "Routers and switches that keep cameras and internet connections stable.",
     description:
-      "A strong CCTV setup also depends on dependable routing and switching. These picks cover everyday network expansion and camera power/distribution needs.",
+      "Useful for IP camera power, network expansion, and remote access performance.",
     href: "/products#routers-networking",
     products: networkingHotProducts,
   },
 ];
+const categoryHighlights: Record<string, string> = {
+  "cctv-cameras": "Indoor & outdoor coverage",
+  "wireless-cameras": "App-based monitoring",
+  "dvr-nvr-systems": "Central recording",
+  "routers-networking": "Stable connectivity",
+  "poe-gigabit-switches": "Camera power & switching",
+  "accessories-cables": "Cables, power, adapters",
+  "biometrics-access": "Attendance & access control",
+};
+
 const categoryTiles = catalogCategories.map((category) => ({
   ...category,
   count: getProductsForCategory(category.key).length,
+  previewImage: getProductsForCategory(category.key)[0]?.image ?? null,
+  helperText: categoryHighlights[category.key] ?? "Security essentials",
 }));
 
 export default function HomePage() {
@@ -66,15 +79,14 @@ export default function HomePage() {
       <section className="page-section overflow-hidden pt-10 sm:pt-14">
         <Container className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">
           <div className="fade-up">
-            <span className="section-kicker">CCTV & Security Solutions In Nepal</span>
+            <span className="section-kicker">CCTV Shop In Chitwan</span>
             <h1 className="mt-6 max-w-4xl font-heading text-4xl tracking-tight text-ink sm:text-5xl lg:text-6xl">
-              Explore hot products, real models, and practical security solutions
-              for homes and businesses.
+              CCTV cameras, wireless security, and installation support for
+              homes, shops, and offices.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-8 copy-muted sm:text-lg">
-              {siteConfig.shortName} now combines a cleaner product-first catalog
-              with installation support, expert guidance, and fast inquiry flow
-              from Narayangarh, Chitwan to customers across Nepal.
+              Super Star Electronics supplies Hikvision, EZVIZ, networking
+              products, and practical setup support from Narayangarh, Chitwan.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -94,16 +106,19 @@ export default function HomePage() {
               </a>
             </div>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              {businessStats.map((stat, index) => (
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              {offerHighlights.map((item, index) => (
                 <div
-                  key={stat.label}
+                  key={item.title}
                   className={`surface-card p-5 fade-up ${index === 0 ? "fade-delay-1" : index === 1 ? "fade-delay-2" : "fade-delay-3"}`}
                 >
-                  <p className="font-heading text-xl text-brand-blue">{stat.value}</p>
-                  <p className="mt-2 text-sm uppercase tracking-[0.18em] copy-muted">
-                    {stat.label}
-                  </p>
+                  <div className="flex items-start gap-3">
+                    <IconMark name={item.icon} className="h-11 w-11 shrink-0" />
+                    <div>
+                      <p className="font-heading text-lg text-ink">{item.title}</p>
+                      <p className="mt-1 text-sm leading-6 copy-muted">{item.detail}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -115,10 +130,10 @@ export default function HomePage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.22em] text-brand-blue">
-                    Hot Products
+                    Popular This Week
                   </p>
                   <h2 className="mt-3 font-heading text-3xl tracking-tight text-ink">
-                    Wireless cameras customers are asking about right now.
+                    Quick-pick cameras customers ask about first.
                   </h2>
                 </div>
                 <Link href="/products#wireless-cameras" className="action-ghost hidden sm:inline-flex">
@@ -127,8 +142,7 @@ export default function HomePage() {
               </div>
 
               <p className="mt-5 text-sm leading-7 copy-muted sm:text-base">
-                Start with easy-to-install smart cameras and then move into complete
-                CCTV or networking setups when you need broader coverage.
+                A fast starting point for app-based home and shop monitoring.
               </p>
 
               <div className="mt-6 space-y-3">
@@ -140,20 +154,20 @@ export default function HomePage() {
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <div className="rounded-[1.5rem] border border-line bg-white/90 p-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-blue">
-                    Product Focus
+                    Fast Response
                   </p>
-                  <p className="mt-2 font-heading text-xl text-ink">Wireless Cameras</p>
+                  <p className="mt-2 font-heading text-xl text-ink">Call, WhatsApp, or visit</p>
                   <p className="mt-1 text-sm copy-muted">
-                    Smart viewing, simple setup, and fast WhatsApp inquiry flow
+                    Easy inquiry flow for prices, recommendations, and installation help.
                   </p>
                 </div>
                 <div className="rounded-[1.5rem] border border-line bg-white/90 p-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-blue">
-                    Quotation Ready
+                    Local Support
                   </p>
-                  <p className="mt-2 font-heading text-xl text-ink">Homes, Offices, Shops</p>
+                  <p className="mt-2 font-heading text-xl text-ink">Homes, shops, offices</p>
                   <p className="mt-1 text-sm copy-muted">
-                    Ask for package pricing and installation guidance
+                    Ask for package pricing, product matching, and setup planning.
                   </p>
                 </div>
               </div>
@@ -166,8 +180,8 @@ export default function HomePage() {
         <Container>
           <SectionHeading
             eyebrow="Shop By Category"
-            title="Jump into the catalog by product type, not just by page."
-            description="Use category shortcuts like a storefront menu and go straight to the products that match your requirement."
+            title="Go straight to the category that fits your requirement."
+            description="Shortcuts for the main products customers compare first."
           />
 
           <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -177,22 +191,36 @@ export default function HomePage() {
                 href={`/products#${category.key}`}
                 className="surface-card group p-5 transition hover:-translate-y-1 hover:border-brand-blue"
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="font-heading text-xl tracking-tight text-ink transition group-hover:text-brand-blue">
                       {category.name}
                     </p>
-                    <p className="mt-3 text-sm leading-7 copy-muted">
-                      {category.description}
+                    <p className="mt-2 text-sm leading-6 copy-muted">
+                      {category.helperText}
                     </p>
                   </div>
+                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[1rem] bg-surface-strong">
+                    {category.previewImage ? (
+                      <Image
+                        src={category.previewImage}
+                        alt={category.name}
+                        fill
+                        sizes="56px"
+                        className="object-contain p-1.5"
+                        unoptimized
+                      />
+                    ) : null}
+                  </div>
+                </div>
+                <div className="mt-5 flex items-center justify-between gap-3">
                   <span className="rounded-full bg-brand-blue px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white">
-                    {category.count}
+                    {category.count} items
+                  </span>
+                  <span className="text-sm font-semibold text-brand-blue">
+                    Browse
                   </span>
                 </div>
-                <span className="mt-5 inline-flex text-sm font-semibold text-brand-blue">
-                  Browse Category
-                </span>
               </Link>
             ))}
           </div>
@@ -205,18 +233,33 @@ export default function HomePage() {
         </Container>
       </section>
 
-      <section className="page-section pt-0">
-        <Container>
-          <BrandStrip />
-        </Container>
-      </section>
-
       <section className="page-section">
         <Container>
           <SectionHeading
+            eyebrow="Why Choose Us"
+            title="A local team for products, installation, and after-sales support."
+            description="Customers usually want genuine products, neat installation, fast replies, and support after the sale."
+          />
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {whyChooseUs.map((item) => (
+              <div key={item} className="surface-card p-5 sm:p-6">
+                <div className="flex items-start gap-4">
+                  <IconMark name="shield" className="h-11 w-11 shrink-0" />
+                  <p className="text-base leading-7 text-ink">{item}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Container>
+      </section>
+
+      <section className="page-section pt-0">
+        <Container>
+          <SectionHeading
             eyebrow="Services"
-            title="Installation, setup, support, and supply built for real-world business needs."
-            description="We combine products with the service work that makes them valuable: planning, setup, repair, maintenance, and responsive support."
+            title="Installation, setup, repair, and supply for real-world business needs."
+            description="The service side stays simple: plan, install, support, and keep systems running."
           />
 
           <div className="mt-10 grid gap-6 lg:grid-cols-3">
@@ -235,21 +278,62 @@ export default function HomePage() {
 
       <section className="page-section">
         <Container>
-          <SectionHeading
-            eyebrow="Why Choose Us"
-            title="A dependable local partner for surveillance, networking, and after-sales support."
-            description="Customers choose Super Star Electronics Industries because they want trustworthy brands, professional installation, and straightforward support after the sale."
-          />
+          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="surface-card p-6 sm:p-8">
+              <span className="section-kicker">Popular Customer Needs</span>
+              <h2 className="mt-5 font-heading text-3xl tracking-tight text-ink sm:text-4xl">
+                The setups people ask for most often.
+              </h2>
+              <div className="mt-6 space-y-4">
+                {customerScenarios.map((scenario) => (
+                  <div key={scenario.title} className="rounded-[1.35rem] border border-line bg-surface-strong p-5">
+                    <p className="font-heading text-xl text-ink">{scenario.title}</p>
+                    <p className="mt-2 text-sm leading-7 copy-muted">{scenario.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {whyChooseUs.map((item) => (
-              <div key={item} className="surface-card p-6">
-                <div className="flex items-start gap-4">
-                  <IconMark name="shield" className="h-11 w-11 shrink-0" />
-                  <p className="text-base leading-7 text-ink">{item}</p>
+            <div className="surface-card-strong overflow-hidden p-3 sm:p-4">
+              <div className="overflow-hidden rounded-[1.35rem] border border-line bg-white">
+                <iframe
+                  title="Super Star Electronics Industries location map"
+                  src={siteConfig.contact.embedMapUrl}
+                  className="h-[320px] w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              <div className="p-4 sm:p-5">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-blue">
+                  Visit The Shop
+                </p>
+                <h3 className="mt-2 font-heading text-2xl text-ink">
+                  Ganesh Market, Narayangarh, Chitwan
+                </h3>
+                <p className="mt-3 text-sm leading-7 copy-muted sm:text-base">
+                  Use Google Maps for directions, then call ahead if you want to confirm model availability.
+                </p>
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                  <a
+                    href={siteConfig.contact.mapsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="action-secondary"
+                  >
+                    Get Directions
+                  </a>
+                  <a
+                    href={buildWhatsAppUrl({ type: "general" })}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="action-primary"
+                  >
+                    Ask On WhatsApp
+                  </a>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </Container>
       </section>
@@ -262,11 +346,10 @@ export default function HomePage() {
               <div>
                 <span className="section-kicker">Request A Quote</span>
                 <h2 className="mt-5 font-heading text-3xl tracking-tight text-ink sm:text-4xl">
-                  Need a CCTV package, installation quote, or product recommendation?
+                  Need a CCTV package, site visit, or product recommendation?
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 copy-muted sm:text-lg">
-                  Send a quick inquiry and we can help you compare options for homes,
-                  shops, offices, and industrial spaces.
+                  Send a quick inquiry and we can match products, installation, and budget options for your location.
                 </p>
               </div>
 

@@ -111,6 +111,7 @@ export interface SiteConfig {
     productWhatsapp: string;
     email: string;
     mapsUrl: string;
+    embedMapUrl: string;
   };
   hours: {
     daysLabel: string;

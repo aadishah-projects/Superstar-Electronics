@@ -60,51 +60,51 @@
 
 @layer components {
   .page-section {
-    @apply py-14 sm:py-18 lg:py-24;
+    @apply py-10 sm:py-18 lg:py-24;
   }
 
   .surface-card {
-    @apply rounded-[1.75rem] border bg-white/88 backdrop-blur-xl;
+    @apply rounded-[1.25rem] border bg-white/88 backdrop-blur-xl sm:rounded-[1.75rem];
     border-color: var(--line);
     box-shadow: var(--shadow-soft);
   }
 
   .surface-card-strong {
-    @apply rounded-[2rem] border bg-white/94 backdrop-blur-xl;
+    @apply rounded-[1.4rem] border bg-white/94 backdrop-blur-xl sm:rounded-[2rem];
     border-color: var(--line);
     box-shadow: var(--shadow-soft);
   }
 
   .section-kicker {
-    @apply inline-flex items-center gap-2 rounded-full px-4 py-2 text-[0.72rem] font-semibold uppercase tracking-[0.24em];
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[0.64rem] font-semibold uppercase tracking-[0.2em] sm:px-4 sm:py-2 sm:text-[0.72rem] sm:tracking-[0.24em];
     color: var(--brand-blue);
     border: 1px solid color-mix(in srgb, var(--brand-blue) 18%, white);
     background: color-mix(in srgb, var(--brand-blue) 6%, white);
   }
 
   .action-primary {
-    @apply inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition duration-200 hover:-translate-y-0.5;
+    @apply inline-flex items-center justify-center rounded-full px-4 py-2.5 text-[0.84rem] font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-5 sm:py-3 sm:text-sm;
     background: var(--brand-blue);
     color: white;
     box-shadow: var(--shadow-button);
   }
 
   .action-secondary {
-    @apply inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition duration-200 hover:-translate-y-0.5;
+    @apply inline-flex items-center justify-center rounded-full px-4 py-2.5 text-[0.84rem] font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-5 sm:py-3 sm:text-sm;
     background: white;
     color: var(--brand-blue);
     border: 1px solid color-mix(in srgb, var(--brand-blue) 18%, white);
   }
 
   .action-accent {
-    @apply inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition duration-200 hover:-translate-y-0.5;
+    @apply inline-flex items-center justify-center rounded-full px-4 py-2.5 text-[0.84rem] font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-5 sm:py-3 sm:text-sm;
     background: var(--brand-red);
     color: white;
     box-shadow: 0 18px 38px rgba(200, 43, 43, 0.22);
   }
 
   .action-ghost {
-    @apply inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition duration-200 hover:-translate-y-0.5;
+    @apply inline-flex items-center justify-center rounded-full px-3 py-1.5 text-[0.84rem] font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-4 sm:py-2 sm:text-sm;
     color: var(--brand-blue);
     background: color-mix(in srgb, var(--brand-blue) 6%, white);
   }

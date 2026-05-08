@@ -19,7 +19,7 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = buildMetadata({
   title: "CCTV & Security Solutions in Chitwan, Nepal",
   description:
-    "Super Star Electronics Industries provides CCTV cameras, wireless surveillance, networking products, installation, and support for homes, shops, offices, and industries across Nepal.",
+    "Super Star Electronics Industries is a CCTV shop in Narayangarh, Chitwan offering Hikvision and EZVIZ cameras, wireless surveillance, networking products, installation, and support across Nepal.",
   path: "/",
 });
 

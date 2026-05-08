@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { IconMark } from "@/components/icon-mark";
 import { JsonLd } from "@/components/json-ld";
-import { contactMethods, siteConfig } from "@/data/site";
+import { contactMethods, offerHighlights, siteConfig } from "@/data/site";
 import { buildMetadata } from "@/lib/metadata";
 import { getLocalBusinessSchema } from "@/lib/structured-data";
 import { buildWhatsAppUrl, toTelHref } from "@/lib/urls";
@@ -102,6 +102,14 @@ export default function ContactPage() {
                 on {siteConfig.hours.closedOn}. For urgent support, calling the main
                 line is the fastest option.
               </p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {offerHighlights.slice(0, 2).map((item) => (
+                  <div key={item.title} className="rounded-[1.25rem] border border-line bg-surface-strong p-4">
+                    <p className="text-sm font-semibold text-ink">{item.title}</p>
+                    <p className="mt-1 text-sm leading-6 copy-muted">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
               <a
                 href={toTelHref(siteConfig.contact.primaryPhone)}
                 className="action-primary mt-6"
@@ -130,8 +138,18 @@ export default function ContactPage() {
             </div>
           </div>
 
-          <div className="surface-card-strong mt-16 p-8 sm:p-10">
-            <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="surface-card-strong mt-16 overflow-hidden p-3 sm:p-4">
+            <div className="overflow-hidden rounded-[1.5rem] border border-line bg-white">
+              <iframe
+                title="Super Star Electronics Industries location map"
+                src={siteConfig.contact.embedMapUrl}
+                className="h-[340px] w-full border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+
+            <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-end">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.22em] text-brand-blue">
                   Location
@@ -141,18 +159,28 @@ export default function ContactPage() {
                 </h2>
                 <p className="mt-4 max-w-3xl text-base leading-8 copy-muted">
                   Use Google Maps for directions or contact us first if you want to
-                  confirm product availability before visiting the shop.
+                  confirm product availability or schedule a site visit before visiting the shop.
                 </p>
               </div>
 
-              <a
-                href={siteConfig.contact.mapsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="action-secondary"
-              >
-                Open In Google Maps
-              </a>
+              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                <a
+                  href={siteConfig.contact.mapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="action-secondary"
+                >
+                  Open In Google Maps
+                </a>
+                <a
+                  href={buildWhatsAppUrl({ type: "general" })}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="action-primary"
+                >
+                  Ask Before Visiting
+                </a>
+              </div>
             </div>
           </div>
         </Container>

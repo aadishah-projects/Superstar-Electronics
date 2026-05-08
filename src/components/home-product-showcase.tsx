@@ -32,13 +32,12 @@ export function HomeProductShowcase({ sections }: HomeProductShowcaseProps) {
     <div className="surface-card-strong p-6 sm:p-8 lg:p-10">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <span className="section-kicker">Hot Products</span>
+          <span className="section-kicker">Featured Products</span>
           <h2 className="mt-5 font-heading text-3xl tracking-tight text-ink sm:text-4xl">
-            Browse the categories customers ask for most.
+            Start with the product groups customers ask for most.
           </h2>
-          <p className="mt-4 max-w-3xl text-base leading-8 copy-muted">
-            Switch between product groups and jump directly into real models,
-            prices, and product-specific WhatsApp inquiries.
+          <p className="mt-4 max-w-3xl text-base leading-7 copy-muted">
+            Switch categories, compare real models, and jump straight to WhatsApp.
           </p>
         </div>
 
@@ -69,7 +68,7 @@ export function HomeProductShowcase({ sections }: HomeProductShowcaseProps) {
           <h3 className="mt-2 font-heading text-2xl tracking-tight text-ink sm:text-3xl">
             {activeSection.title}
           </h3>
-          <p className="mt-3 max-w-3xl text-base leading-8 copy-muted">
+          <p className="mt-3 max-w-3xl text-base leading-7 copy-muted">
             {activeSection.description}
           </p>
         </div>
@@ -79,7 +78,7 @@ export function HomeProductShowcase({ sections }: HomeProductShowcaseProps) {
         </Link>
       </div>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {activeSection.products.map((product) => (
           <CatalogProductCard key={`${activeSection.key}-${product.id}`} product={product} />
         ))}

@@ -8,28 +8,28 @@ interface ServiceCardProps {
 
 export function ServiceCard({ service }: ServiceCardProps) {
   return (
-    <article className="surface-card h-full p-6 sm:p-7">
-      <div className="flex items-center gap-4">
+    <article className="surface-card h-full p-5 sm:p-7">
+      <div className="flex items-center gap-3 sm:gap-4">
         <IconMark name={service.icon} />
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-blue">
+          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-brand-blue sm:text-sm sm:tracking-[0.18em]">
             Service
           </p>
-          <h3 className="mt-1 font-heading text-2xl tracking-tight text-ink">
+          <h3 className="mt-1 font-heading text-xl tracking-tight text-ink sm:text-2xl">
             {service.name}
           </h3>
         </div>
       </div>
 
-      <p className="mt-5 text-sm leading-7 copy-muted sm:text-base">
+      <p className="mt-4 text-sm leading-6 copy-muted sm:mt-5 sm:text-base sm:leading-7">
         {service.summary}
       </p>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2 sm:mt-5">
         {service.highlights.map((highlight) => (
           <span
             key={highlight}
-            className="rounded-full bg-surface px-3 py-1 text-sm text-brand-blue"
+            className="rounded-full bg-surface px-2.5 py-1 text-[0.82rem] text-brand-blue sm:px-3 sm:text-sm"
           >
             {highlight}
           </span>
@@ -43,7 +43,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
         })}
         target="_blank"
         rel="noreferrer"
-        className="action-secondary mt-8"
+        className="action-secondary mt-6 sm:mt-8"
       >
         Ask About This Service
       </a>

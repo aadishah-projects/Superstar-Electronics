@@ -26,10 +26,12 @@ export const siteConfig: SiteConfig = {
   },
   contact: {
     primaryPhone: "9855026835",
-    whatsapp: "9845048635",
+    whatsapp: "9855026835",
     productWhatsapp: "9855026835",
     email: "suvashshah251@gmail.com",
     mapsUrl: "https://maps.app.goo.gl/VRqi16GyjuqKfjkU8?utm_source=chatgpt.com",
+    embedMapUrl:
+      "https://www.google.com/maps?q=Ganesh%20Market%2C%20Narayangarh%2C%20Chitwan%2C%20Nepal&z=16&output=embed",
   },
   hours: {
     daysLabel: "Sunday - Friday",
@@ -157,6 +159,44 @@ export const whyChooseUs: string[] = [
   "Affordable pricing for homes and businesses",
   "Wholesale and retail supply options",
   "Customized solutions with after-sales support",
+];
+
+export const offerHighlights = [
+  {
+    title: "Free Site Visit",
+    detail: "Available in Chitwan for camera planning and coverage advice.",
+    icon: "map" as const,
+  },
+  {
+    title: "Fast Installation",
+    detail: "Quick scheduling for urgent home, office, and shop setups.",
+    icon: "tools" as const,
+  },
+  {
+    title: "1-Year Support",
+    detail: "Ongoing assistance after installation and product delivery.",
+    icon: "shield" as const,
+  },
+  {
+    title: "Wholesale Pricing",
+    detail: "Supply support for resellers, projects, and bulk purchases.",
+    icon: "warehouse" as const,
+  },
+];
+
+export const customerScenarios = [
+  {
+    title: "Home Security",
+    detail: "Entry points, floors, gates, and mobile viewing for family peace of mind.",
+  },
+  {
+    title: "Shop Monitoring",
+    detail: "Counter coverage, customer movement, and storage visibility for daily operations.",
+  },
+  {
+    title: "Office & Network",
+    detail: "Cameras, recording, routing, and access planning for reliable business use.",
+  },
 ];
 
 export const productCategories: ProductCategory[] = [

@@ -16,6 +16,16 @@ export function SiteHeader() {
   const [desktopProductsOpen, setDesktopProductsOpen] = useState(false);
   const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
   const desktopProductsRef = useRef<HTMLDivElement | null>(null);
+  const categoryMenuItems = catalogCategories.map((category) => {
+    const products = getProductsForCategory(category.key);
+
+    return {
+      category,
+      previewImage: products[0]?.image ?? null,
+      previewName: products[0]?.name ?? category.name,
+    };
+  });
+
   const closeMenu = () => {
     setIsOpen(false);
     setDesktopProductsOpen(false);
@@ -38,7 +48,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white/88 backdrop-blur-xl">
       <div className="bg-brand-blue text-white">
-        <Container className="flex flex-col gap-2 py-2 text-[0.72rem] uppercase tracking-[0.22em] sm:flex-row sm:items-center sm:justify-between">
+        <Container className="flex flex-col gap-1 py-1.5 text-[0.62rem] uppercase tracking-[0.16em] sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-2 sm:text-[0.72rem] sm:tracking-[0.22em]">
           <p>
             {siteConfig.address.street}, {siteConfig.address.locality}
           </p>
@@ -51,7 +61,7 @@ export function SiteHeader() {
         </Container>
       </div>
 
-      <Container className="relative flex items-center justify-between py-3">
+      <Container className="relative flex items-center justify-between py-2 sm:py-3">
         <Link href="/" className="shrink-0" aria-label={siteConfig.name} onClick={closeMenu}>
           <Image
             src="/brand/logo-horizontal.png"
@@ -59,7 +69,7 @@ export function SiteHeader() {
             width={848}
             height={276}
             priority
-            className="h-auto w-[185px] sm:w-[220px]"
+            className="h-auto w-[150px] sm:w-[220px]"
           />
         </Link>
 
@@ -128,8 +138,8 @@ export function SiteHeader() {
                   </div>
 
                   {desktopProductsOpen ? (
-                    <div className="absolute left-0 top-full z-50 w-[33rem] pt-3">
-                      <div className="rounded-[1.75rem] border border-line bg-white p-5 shadow-[0_22px_75px_rgba(17,39,75,0.14)]">
+                    <div className="absolute left-0 top-full z-50 w-[28rem] pt-3">
+                      <div className="max-h-[calc(100vh-7rem)] overflow-y-auto rounded-[1.75rem] border border-line bg-white p-5 shadow-[0_22px_75px_rgba(17,39,75,0.14)]">
                         <div className="rounded-[1.5rem] bg-surface-strong p-4">
                           <Link
                             href="/products"
@@ -141,24 +151,30 @@ export function SiteHeader() {
                           </Link>
                         </div>
 
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          {catalogCategories.map((category) => (
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          {categoryMenuItems.map(({ category, previewImage, previewName }) => (
                             <Link
                               key={category.key}
                               href={`/products#${category.key}`}
                               onClick={closeMenu}
-                              className="rounded-[1.25rem] border border-line px-4 py-4 transition hover:border-brand-blue hover:bg-surface-strong"
+                              className="rounded-[1.15rem] border border-line px-3 py-3 transition hover:border-brand-blue hover:bg-surface-strong"
                             >
-                              <div className="flex items-start justify-between gap-4">
-                                <div>
-                                  <p className="font-semibold text-ink">{category.name}</p>
-                                  <p className="mt-1 text-sm leading-6 copy-muted">
-                                    {category.description}
-                                  </p>
+                              <div className="flex items-center gap-3">
+                                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-[0.95rem] bg-surface-strong">
+                                  {previewImage ? (
+                                    <Image
+                                      src={previewImage}
+                                      alt={previewName}
+                                      fill
+                                      sizes="48px"
+                                      className="object-contain p-1.5"
+                                      unoptimized
+                                    />
+                                  ) : null}
                                 </div>
-                                <span className="rounded-full bg-brand-blue px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white">
-                                  {getProductsForCategory(category.key).length}
-                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate font-semibold text-ink">{category.name}</p>
+                                </div>
                               </div>
                             </Link>
                           ))}
@@ -196,34 +212,34 @@ export function SiteHeader() {
         <button
           type="button"
           onClick={() => setIsOpen((current) => !current)}
-          className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-line bg-white text-brand-blue lg:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-[1rem] border border-line bg-white text-brand-blue lg:hidden"
           aria-expanded={isOpen}
           aria-controls="mobile-menu"
           aria-label="Toggle menu"
         >
-          <span className="flex flex-col gap-1.5">
-            <span className="block h-0.5 w-5 rounded-full bg-current" />
-            <span className="block h-0.5 w-5 rounded-full bg-current" />
-            <span className="block h-0.5 w-5 rounded-full bg-current" />
+          <span className="flex flex-col gap-1.25">
+            <span className="block h-0.5 w-4.5 rounded-full bg-current" />
+            <span className="block h-0.5 w-4.5 rounded-full bg-current" />
+            <span className="block h-0.5 w-4.5 rounded-full bg-current" />
           </span>
         </button>
 
         {isOpen ? (
           <div
             id="mobile-menu"
-            className="absolute inset-x-0 top-full mt-3 rounded-[1.75rem] border border-line bg-white p-4 shadow-[0_22px_75px_rgba(17,39,75,0.14)] lg:hidden"
+            className="absolute inset-x-0 top-full mt-2 rounded-[1.35rem] border border-line bg-white p-3 shadow-[0_22px_75px_rgba(17,39,75,0.14)] lg:hidden"
           >
-            <nav className="flex flex-col gap-2" aria-label="Mobile navigation">
+            <nav className="flex flex-col gap-1.5" aria-label="Mobile navigation">
               {navigation.map((item) => {
                 const isActive =
                   item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
 
                 if (item.href === "/products") {
                   return (
-                    <div key={item.href} className="rounded-2xl bg-surface-strong p-2">
+                    <div key={item.href} className="rounded-[1rem] bg-surface-strong p-1.5">
                       <div
                         className={cn(
-                          "flex items-center rounded-2xl",
+                          "flex items-center rounded-[0.95rem]",
                           isActive ? "bg-brand-blue text-white" : "bg-white text-ink",
                         )}
                       >
@@ -231,7 +247,7 @@ export function SiteHeader() {
                           href="/products"
                           onClick={closeMenu}
                           className={cn(
-                            "flex-1 rounded-l-2xl px-4 py-3 text-sm font-semibold transition",
+                            "flex-1 rounded-l-[0.95rem] px-3 py-2.5 text-sm font-semibold transition",
                             isActive ? "text-white" : "hover:text-brand-blue",
                           )}
                         >
@@ -241,7 +257,7 @@ export function SiteHeader() {
                           type="button"
                           onClick={() => setMobileProductsOpen((current) => !current)}
                           className={cn(
-                            "rounded-r-2xl px-4 py-3 transition",
+                            "rounded-r-[0.95rem] px-3 py-2.5 transition",
                             isActive ? "text-white" : "hover:text-brand-blue",
                           )}
                           aria-expanded={mobileProductsOpen}
@@ -266,11 +282,11 @@ export function SiteHeader() {
                       </div>
 
                       {mobileProductsOpen ? (
-                        <div className="mt-2 space-y-2 px-2 pb-2">
+                        <div className="mt-2 space-y-1.5 px-1.5 pb-1.5">
                           <Link
                             href="/products"
                             onClick={closeMenu}
-                            className="block rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:text-brand-blue"
+                            className="block rounded-[0.95rem] bg-white px-3 py-2.5 text-sm font-semibold text-ink transition hover:text-brand-blue"
                           >
                             All Products
                           </Link>
@@ -279,7 +295,7 @@ export function SiteHeader() {
                               key={category.key}
                               href={`/products#${category.key}`}
                               onClick={closeMenu}
-                              className="block rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:text-brand-blue"
+                              className="block rounded-[0.95rem] bg-white px-3 py-2.5 text-sm font-semibold text-ink transition hover:text-brand-blue"
                             >
                               {category.name}
                             </Link>
@@ -296,7 +312,7 @@ export function SiteHeader() {
                     href={item.href}
                     onClick={closeMenu}
                     className={cn(
-                      "rounded-2xl px-4 py-3 text-sm font-semibold transition",
+                      "rounded-[0.95rem] px-3 py-2.5 text-sm font-semibold transition",
                       isActive
                         ? "bg-brand-blue text-white"
                         : "bg-surface-strong text-ink hover:text-brand-blue",
@@ -311,7 +327,7 @@ export function SiteHeader() {
             <a
               href={toTelHref(siteConfig.contact.primaryPhone)}
               onClick={closeMenu}
-              className="action-secondary mt-4 w-full"
+              className="action-secondary mt-3 w-full"
             >
               Call {siteConfig.contact.primaryPhone}
             </a>

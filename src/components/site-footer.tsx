@@ -13,8 +13,8 @@ export function SiteFooter() {
             <Image
               src="/brand/logo-horizontal.png"
               alt={siteConfig.name}
-              width={440}
-              height={190}
+              width={848}
+              height={276}
               className="h-auto w-[220px]"
             />
             <p className="mt-5 max-w-2xl text-sm leading-7 copy-muted sm:text-base">

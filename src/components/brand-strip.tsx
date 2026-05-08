@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { brands } from "@/data/site";
 
 export function BrandStrip() {
@@ -24,7 +25,16 @@ export function BrandStrip() {
             key={brand.name}
             className="rounded-2xl border border-line bg-white px-4 py-4"
           >
-            <p className="font-heading text-lg text-ink">{brand.name}</p>
+            <div className="flex h-16 items-center justify-center rounded-[1.25rem] bg-surface-strong px-4">
+              <Image
+                src={brand.logoSrc}
+                alt={brand.logoAlt}
+                width={180}
+                height={64}
+                className="max-h-10 w-auto object-contain"
+              />
+            </div>
+            <p className="mt-4 font-heading text-lg text-ink">{brand.name}</p>
             <p className="mt-1 text-sm leading-6 copy-muted">{brand.specialty}</p>
           </div>
         ))}

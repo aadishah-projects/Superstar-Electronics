@@ -28,6 +28,8 @@ export interface ContactMethod {
 export interface BrandItem {
   name: string;
   specialty: string;
+  logoSrc: string;
+  logoAlt: string;
 }
 
 export interface CatalogCategory {
@@ -106,6 +108,7 @@ export interface SiteConfig {
   contact: {
     primaryPhone: string;
     whatsapp: string;
+    productWhatsapp: string;
     email: string;
     mapsUrl: string;
   };

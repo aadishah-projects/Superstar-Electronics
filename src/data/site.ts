@@ -27,6 +27,7 @@ export const siteConfig: SiteConfig = {
   contact: {
     primaryPhone: "9855026835",
     whatsapp: "9845048635",
+    productWhatsapp: "9855026835",
     email: "suvashshah251@gmail.com",
     mapsUrl: "https://maps.app.goo.gl/VRqi16GyjuqKfjkU8?utm_source=chatgpt.com",
   },
@@ -99,13 +100,48 @@ export const contactMethods: ContactMethod[] = [
 ];
 
 export const brands: BrandItem[] = [
-  { name: "Hikvision", specialty: "Professional surveillance systems" },
-  { name: "EZVIZ", specialty: "Smart home and wireless monitoring" },
-  { name: "HiLook", specialty: "Value-focused CCTV solutions" },
-  { name: "IMOU", specialty: "Wi-Fi cameras and mobile viewing" },
-  { name: "Tiandy", specialty: "Advanced security cameras and recorders" },
-  { name: "Consistent", specialty: "Networking accessories and infrastructure" },
-  { name: "ZKTeco", specialty: "Access control and security devices" },
+  {
+    name: "Hikvision",
+    specialty: "Professional surveillance systems",
+    logoSrc: "/brands/hikvision.png",
+    logoAlt: "Hikvision logo",
+  },
+  {
+    name: "EZVIZ",
+    specialty: "Smart home and wireless monitoring",
+    logoSrc: "/brands/ezviz.png",
+    logoAlt: "EZVIZ logo",
+  },
+  {
+    name: "HiLook",
+    specialty: "Value-focused CCTV solutions",
+    logoSrc: "/brands/hilook.webp",
+    logoAlt: "HiLook logo",
+  },
+  {
+    name: "IMOU",
+    specialty: "Wi-Fi cameras and mobile viewing",
+    logoSrc: "/brands/imou.png",
+    logoAlt: "IMOU logo",
+  },
+  {
+    name: "Tiandy",
+    specialty: "Advanced security cameras and recorders",
+    logoSrc: "/brands/tiandy.png",
+    logoAlt: "Tiandy logo",
+  },
+  {
+    name: "Consistent",
+    specialty: "Networking accessories and infrastructure",
+    logoSrc: "/brands/consistent.png",
+    logoAlt: "Consistent logo",
+  },
+  {
+    name: "ZKTeco",
+    specialty: "Access control and security devices",
+    logoSrc: "/brands/zkteco.png",
+    logoAlt: "ZKTeco logo",
+  },
 ];
 
 export const businessStats: BusinessStat[] = [

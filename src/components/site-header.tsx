@@ -56,8 +56,8 @@ export function SiteHeader() {
           <Image
             src="/brand/logo-horizontal.png"
             alt={siteConfig.name}
-            width={440}
-            height={190}
+            width={848}
+            height={276}
             priority
             className="h-auto w-[185px] sm:w-[220px]"
           />

@@ -46,7 +46,7 @@ export function buildProductWhatsAppUrl(product: CatalogProduct) {
     `Category: ${product.categoryName}`,
   ].filter(Boolean) as string[];
 
-  return buildWhatsAppUrl({
+  const message = buildWhatsAppUrl({
     type: "product",
     subject: product.name,
     details: [
@@ -56,4 +56,6 @@ export function buildProductWhatsAppUrl(product: CatalogProduct) {
       "Please include installation cost if applicable",
     ],
   });
+
+  return message.replace(siteConfig.contact.whatsapp, siteConfig.contact.productWhatsapp);
 }

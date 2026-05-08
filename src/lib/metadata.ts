@@ -34,8 +34,8 @@ export function buildMetadata({
       images: [
         {
           url: "/brand/logo-horizontal.png",
-          width: 440,
-          height: 190,
+          width: 848,
+          height: 276,
           alt: siteConfig.name,
         },
       ],

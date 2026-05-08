@@ -50,6 +50,7 @@ export interface CatalogProduct {
   price: number;
   originalPrice: number | null;
   currency: string;
+  priceType?: "market" | "mrp";
   image: string;
   sourceUrl: string;
   sourceCategory: string;

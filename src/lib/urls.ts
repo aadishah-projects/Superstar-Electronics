@@ -40,9 +40,10 @@ export function formatNpr(value: number) {
 }
 
 export function buildProductWhatsAppUrl(product: CatalogProduct) {
+  const priceLabel = product.priceType === "mrp" ? "MRP" : "Reference market price";
   const details = [
     product.model ? `Model: ${product.model}` : null,
-    `Reference market price: ${formatNpr(product.price)}`,
+    `${priceLabel}: ${formatNpr(product.price)}`,
     `Category: ${product.categoryName}`,
   ].filter(Boolean) as string[];
 

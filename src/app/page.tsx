@@ -62,6 +62,9 @@ const categoryHighlights: Record<string, string> = {
   "poe-gigabit-switches": "Camera power & switching",
   "accessories-cables": "Cables, power, adapters",
   "biometrics-access": "Attendance & access control",
+  "video-intercom": "Door entry & indoor monitors",
+  "monitors-displays": "Viewing & display screens",
+  "interactive-boards": "Classroom & meeting displays",
 };
 
 const categoryTiles = catalogCategories.map((category) => ({

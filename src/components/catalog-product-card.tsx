@@ -13,6 +13,7 @@ export function CatalogProductCard({ product }: CatalogProductCardProps) {
     product.originalPrice && product.originalPrice > product.price
       ? product.originalPrice - product.price
       : null;
+  const priceLabel = product.priceType === "mrp" ? "MRP" : "Market reference price";
 
   return (
     <article className="surface-card group flex h-full flex-col overflow-hidden">
@@ -98,9 +99,7 @@ export function CatalogProductCard({ product }: CatalogProductCardProps) {
           ) : null}
         </div>
 
-        <p className="mt-1 text-xs uppercase tracking-[0.18em] copy-muted">
-          Market reference price
-        </p>
+        <p className="mt-1 text-xs uppercase tracking-[0.18em] copy-muted">{priceLabel}</p>
 
         <div className="mt-5 flex flex-wrap gap-2">
           <a

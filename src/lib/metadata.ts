@@ -15,6 +15,8 @@ export function buildMetadata({
   keywords = [],
 }: MetadataInput): Metadata {
   const url = new URL(path, siteConfig.siteUrl).toString();
+  const googleVerification =
+    process.env.GOOGLE_SITE_VERIFICATION?.trim() || undefined;
 
   return {
     metadataBase: new URL(siteConfig.siteUrl),
@@ -24,6 +26,9 @@ export function buildMetadata({
     manifest: "/site.webmanifest",
     alternates: {
       canonical: url,
+    },
+    verification: {
+      google: googleVerification,
     },
     icons: {
       icon: [

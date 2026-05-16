@@ -11,6 +11,21 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "www.superstarelectronics.com.np",
+          },
+        ],
+        destination: "https://superstarelectronics.com.np/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

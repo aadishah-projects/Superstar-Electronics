@@ -15,7 +15,7 @@ export const siteConfig: SiteConfig = {
   tagline: "Trusted CCTV & Security Solutions in Chitwan, Nepal",
   description:
     "Super Star Electronics Industries is a Chitwan-based IT and security solutions provider delivering CCTV surveillance, networking equipment, installation, maintenance, and reliable after-sales support across Nepal.",
-  siteUrl: "https://adityakumarshah.com.np",
+  siteUrl: "https://superstarelectronics.com.np",
   owner: "Suvash Chandra Shah",
   address: {
     street: "Ganesh Market, Narayangarh",

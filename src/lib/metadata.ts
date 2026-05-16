@@ -21,6 +21,7 @@ export function buildMetadata({
     title,
     description,
     keywords: [...siteConfig.keywords, ...keywords],
+    manifest: "/site.webmanifest",
     alternates: {
       canonical: url,
     },
@@ -28,17 +29,22 @@ export function buildMetadata({
       icon: [
         { url: "/favicon.ico", sizes: "any" },
         {
-          url: "/brand/logo-icon.png",
+          url: "/favicon-48x48.png",
           type: "image/png",
-          sizes: "512x512",
+          sizes: "48x48",
+        },
+        {
+          url: "/favicon-192x192.png",
+          type: "image/png",
+          sizes: "192x192",
         },
       ],
       shortcut: ["/favicon.ico"],
       apple: [
         {
-          url: "/apple-icon.png",
+          url: "/apple-touch-icon.png",
           type: "image/png",
-          sizes: "512x512",
+          sizes: "180x180",
         },
       ],
     },

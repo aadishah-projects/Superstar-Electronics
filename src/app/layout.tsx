@@ -5,6 +5,7 @@ import { FloatingContactActions } from "@/components/floating-contact-actions";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { buildMetadata } from "@/lib/metadata";
+import { Analytics } from "@vercel/analytics/next";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -40,6 +41,7 @@ export default function RootLayout({
           <SiteFooter />
           <FloatingContactActions />
         </div>
+        <Analytics />
       </body>
     </html>
   );

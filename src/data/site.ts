@@ -26,8 +26,8 @@ export const siteConfig: SiteConfig = {
   },
   contact: {
     primaryPhone: "9855026835",
-    whatsapp: "9855026835",
-    productWhatsapp: "9855026835",
+    whatsapp: "9779855026835",
+    productWhatsapp: "9779855026835",
     email: "suvashshah251@gmail.com",
     mapsUrl: "https://maps.app.goo.gl/VRqi16GyjuqKfjkU8?utm_source=chatgpt.com",
     embedMapUrl:
@@ -80,7 +80,7 @@ export const contactMethods: ContactMethod[] = [
   },
   {
     label: "WhatsApp",
-    value: siteConfig.contact.whatsapp,
+    value: siteConfig.contact.primaryPhone,
     href: `https://wa.me/${siteConfig.contact.whatsapp}`,
     note: "Quick replies for pricing, availability, and support.",
     icon: "message",

@@ -15,8 +15,8 @@ import {
   siteConfig,
   whyChooseUs,
 } from "@/data/site";
+import { getOrganizationSchema, getWebSiteSchema } from "@/lib/structured-data";
 import { buildWhatsAppUrl, toTelHref } from "@/lib/urls";
-import { getOrganizationSchema } from "@/lib/structured-data";
 
 const wirelessHotProducts = getProductsForCategory("wireless-cameras").slice(0, 3);
 const cctvHotProducts = getProductsForCategory("cctv-cameras").slice(0, 3);
@@ -78,6 +78,7 @@ export default function HomePage() {
   return (
     <>
       <JsonLd data={getOrganizationSchema()} />
+      <JsonLd data={getWebSiteSchema()} />
 
       <section className="page-section overflow-hidden pt-8 sm:pt-14">
         <Container className="grid gap-6 sm:gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">

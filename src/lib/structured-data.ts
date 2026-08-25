@@ -27,6 +27,16 @@ export function getOrganizationSchema() {
   };
 }
 
+export function getWebSiteSchema() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    url: siteConfig.siteUrl,
+    name: siteConfig.name,
+    alternateName: [siteConfig.shortName, "superstarelectronics.com.np"],
+  };
+}
+
 export function getLocalBusinessSchema() {
   return {
     "@context": "https://schema.org",

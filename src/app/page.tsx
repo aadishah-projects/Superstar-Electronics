@@ -53,8 +53,8 @@ export default function HomePage() {
       <JsonLd data={getOrganizationSchema()} />
       <JsonLd data={getWebSiteSchema()} />
 
-      <section className="px-4 pb-6 pt-5 sm:px-6 sm:pt-8 lg:px-8">
-        <Container className="overflow-hidden rounded-2xl border border-[#dce6f2] bg-white shadow-[0_12px_35px_rgba(25,65,115,0.07)]">
+      <section className="px-4 pb-6 pt-5 sm:px-6 sm:pt-8 lg:px-6">
+        <Container className="px-0 overflow-hidden rounded-2xl border border-[#dce6f2] bg-white shadow-[0_12px_35px_rgba(25,65,115,0.07)]">
           <div className="grid lg:grid-cols-[0.92fr_1.08fr]">
             <div className="flex flex-col justify-center bg-[#f2f7fd] p-6 sm:p-10 lg:p-12">
               <div className="flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-[#1463d7]"><span className="h-1.5 w-1.5 rounded-full bg-[#1fa36b]" />Ganesh Market · Narayangarh</div>

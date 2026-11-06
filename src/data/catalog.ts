@@ -113,7 +113,7 @@ function getProductPriority(product: CatalogProduct) {
     score += 10;
   }
 
-  if (product.originalPrice && product.originalPrice > product.price) {
+  if (product.originalPrice && product.price !== null && product.originalPrice > product.price) {
     score += 1;
   }
 

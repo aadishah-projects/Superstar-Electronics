@@ -1,4 +1,4 @@
-import { catalogProducts } from "@/data/catalog";
+import { getCatalogSnapshot } from "@/lib/catalog-source";
 import { siteConfig } from "@/data/site";
 
 const address = {
@@ -38,6 +38,7 @@ export function getWebSiteSchema() {
 }
 
 export function getLocalBusinessSchema() {
+  const catalogProducts = getCatalogSnapshot().products;
   return {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",

@@ -47,10 +47,12 @@ export interface CatalogProduct {
   model: string | null;
   categoryKey: string;
   categoryName: string;
-  price: number;
+  price: number | null;
   originalPrice: number | null;
   currency: string;
   priceType?: "market" | "mrp";
+  priceDisplayMode?: "show_price" | "contact_for_price";
+  availability?: "in_stock" | "out_of_stock" | "unavailable" | "not_tracked";
   image: string;
   sourceUrl: string;
   sourceCategory: string;

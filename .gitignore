@@ -1,5 +1,9 @@
 .vercel
 .next
+.next-idea2
+.next-build-idea2
+.next-idea3
+.next-build-idea3
 node_modules
 
 # local env files
@@ -8,6 +12,14 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
+
+# portal development database
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/portal-uploads/
+public/product-assets-managed/
+*.tsbuildinfo
 
 # logs
 npm-debug.log*

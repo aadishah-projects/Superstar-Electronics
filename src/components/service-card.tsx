@@ -8,7 +8,7 @@ interface ServiceCardProps {
 
 export function ServiceCard({ service }: ServiceCardProps) {
   return (
-    <article className="surface-card h-full p-5 sm:p-7">
+    <article id={service.slug} className="surface-card h-full scroll-mt-28 p-5 sm:p-7">
       <div className="flex items-center gap-3 sm:gap-4">
         <IconMark name={service.icon} />
         <div>

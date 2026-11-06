@@ -18,7 +18,7 @@ export function getProductBadges(product: CatalogProduct, limit = 3) {
 
   const badges: string[] = [];
 
-  addBadge(badges, "Price Drop", Boolean(product.originalPrice && product.originalPrice > product.price));
+  addBadge(badges, "Price Drop", Boolean(product.originalPrice && product.price !== null && product.originalPrice > product.price));
   addBadge(badges, "WiFi", /\bwi-?fi\b|wireless/.test(text));
   addBadge(badges, "2K", /\b2k\b/.test(text));
   addBadge(badges, "3K", /\b3k\b/.test(text));

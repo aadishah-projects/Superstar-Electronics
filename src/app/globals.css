@@ -5,6 +5,7 @@
   --ink: #212121;
   --brand-blue: #1c3c6e;
   --brand-red: #c82b2b;
+  --brand-teal: #0b9b9a;
   --surface: #e8eef8;
   --surface-strong: #f5f8fc;
   --line: rgba(28, 60, 110, 0.14);
@@ -17,11 +18,12 @@
   --color-ink: var(--ink);
   --color-brand-blue: var(--brand-blue);
   --color-brand-red: var(--brand-red);
+  --color-brand-teal: var(--brand-teal);
   --color-surface: var(--surface);
   --color-surface-strong: var(--surface-strong);
   --color-line: var(--line);
   --font-sans: var(--font-manrope);
-  --font-heading: var(--font-space-grotesk);
+  --font-heading: var(--font-manrope);
 }
 
 @layer base {
@@ -48,6 +50,15 @@
     text-decoration: none;
   }
 
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--brand-blue);
+    outline-offset: 2px;
+  }
+
   img {
     max-width: 100%;
     height: auto;
@@ -60,19 +71,19 @@
 
 @layer components {
   .page-section {
-    @apply py-8 sm:py-18 lg:py-24;
+    @apply py-8 sm:py-12 lg:py-16;
   }
 
   .surface-card {
-    @apply rounded-[1.1rem] border bg-white/88 backdrop-blur-xl sm:rounded-[1.75rem];
+    @apply rounded-xl border bg-white/95 backdrop-blur-xl;
     border-color: var(--line);
-    box-shadow: var(--shadow-soft);
+    box-shadow: 0 7px 24px rgba(17, 39, 75, 0.055);
   }
 
   .surface-card-strong {
-    @apply rounded-[1.25rem] border bg-white/94 backdrop-blur-xl sm:rounded-[2rem];
+    @apply rounded-2xl border bg-white/96 backdrop-blur-xl;
     border-color: var(--line);
-    box-shadow: var(--shadow-soft);
+    box-shadow: 0 10px 30px rgba(17, 39, 75, 0.07);
   }
 
   .section-kicker {
@@ -107,6 +118,12 @@
     @apply inline-flex items-center justify-center rounded-full px-3 py-1.5 text-[0.84rem] font-semibold transition duration-200 hover:-translate-y-0.5 sm:px-4 sm:py-2 sm:text-sm;
     color: var(--brand-blue);
     background: color-mix(in srgb, var(--brand-blue) 6%, white);
+  }
+
+  .action-whatsapp {
+    @apply inline-flex min-h-9 items-center justify-center rounded-md px-3 py-2 text-[0.68rem] font-semibold text-white transition hover:-translate-y-0.5 sm:text-xs;
+    background: var(--brand-teal);
+    box-shadow: 0 7px 16px rgba(11, 155, 154, 0.18);
   }
 
   .subtle-pattern {
@@ -147,6 +164,19 @@
 
   .fade-delay-3 {
     animation-delay: 0.24s;
+  }
+
+  .portal-page .surface-card,
+  .portal-page .surface-card-strong {
+    @apply rounded-xl bg-white;
+    box-shadow: 0 6px 24px rgba(20, 67, 125, 0.035);
+  }
+
+  .portal-page .action-primary,
+  .portal-page .action-secondary,
+  .portal-page .action-accent {
+    @apply rounded-lg;
+    box-shadow: none;
   }
 }
 

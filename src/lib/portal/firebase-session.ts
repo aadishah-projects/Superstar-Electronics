@@ -48,7 +48,7 @@ export async function getCurrentFirebasePortalUser() {
     await ensureSqlitePortalShadowUser(user);
     return user;
   } catch {
-    cookieStore.delete(firebaseSessionCookieName);
+    console.error("Firebase portal session verification failed.");
     return null;
   }
 }

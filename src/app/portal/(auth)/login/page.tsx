@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PortalAuthShell } from "@/components/portal/portal-auth-shell";
 import { LoginForm } from "@/components/portal/portal-forms";
 import { getCurrentPortalUser } from "@/lib/portal/auth";
 import { countUsers } from "@/lib/portal/db";
@@ -14,22 +15,22 @@ export default async function PortalLoginPage() {
   const hasUsers = countUsers() > 0;
 
   return (
-    <section className="page-section pt-8 sm:pt-14">
-      <div className="mx-auto max-w-xl px-4 sm:px-6">
-        <div className="surface-card-strong p-6 sm:p-10">
-          <p className="section-kicker">Private workspace</p>
-          <h1 className="mt-5 font-heading text-3xl tracking-tight text-ink sm:text-4xl">Sign in to the business portal</h1>
-              <p className="mt-3 text-sm leading-7 copy-muted sm:text-base">For authorized owners, website managers, staff, and technicians. Customers can submit support requests from the public website.</p>
-          {hasUsers ? <LoginForm /> : (
-            <div className="mt-6 rounded-xl border border-brand-blue/20 bg-brand-blue/[0.06] p-4 text-sm leading-6 text-brand-blue">
-              No owner account exists yet. Complete the secure <Link href="/portal/setup" className="font-semibold underline">initial setup</Link> first.
-            </div>
-          )}
-          {hasUsers ? <div className="mt-6 grid gap-3 rounded-2xl border border-line bg-surface-strong/60 p-4 sm:grid-cols-2 lg:grid-cols-4"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-blue">Owner</p><p className="mt-1 text-xs leading-5 copy-muted">Controls accounts, approvals, and business settings.</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-blue">Website manager</p><p className="mt-1 text-xs leading-5 copy-muted">Maintains the public catalog and day-to-day sales workspace.</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-blue">Staff</p><p className="mt-1 text-xs leading-5 copy-muted">Handles customers, projects, quotations, and support.</p></div><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-blue">Technician</p><p className="mt-1 text-xs leading-5 copy-muted">Uses an owner-issued invite to access assigned jobs.</p></div></div> : null}
-          {hasUsers ? <p className="mt-4 text-xs leading-5 copy-muted">There is no public technician sign-up. Ask an owner to invite you from <span className="font-semibold text-ink">Team</span>; open the private invite link, create your password, then sign in here.</p> : null}
-          <Link href="/" className="mt-6 inline-flex text-sm font-semibold text-brand-blue hover:underline">Return to public website</Link>
+    <PortalAuthShell eyebrow="Private workspace" title="Sign in to the business portal" description="For authorized owners, website managers, staff, and technicians. Customers can submit support requests from the public website.">
+      {hasUsers ? <LoginForm /> : (
+        <div className="mt-8 rounded-2xl border border-[#b9d5fb] bg-[#eef5ff] p-4 text-sm leading-6 text-[#1b559f]">
+          No owner account exists yet. Complete the secure <Link href="/portal/setup" className="font-semibold underline underline-offset-2">initial setup</Link> first.
         </div>
-      </div>
-    </section>
+      )}
+      {hasUsers ? <>
+        <div className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-[#dce6f2] bg-[#f8fbff] p-3"><p className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-[#1463d7]">Owner</p><p className="mt-1 text-xs leading-5 text-[#73849a]">Approvals & settings</p></div>
+          <div className="rounded-2xl border border-[#dce6f2] bg-[#f8fbff] p-3"><p className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-[#1463d7]">Manager</p><p className="mt-1 text-xs leading-5 text-[#73849a]">Catalog & daily sales</p></div>
+          <div className="rounded-2xl border border-[#dce6f2] bg-[#f8fbff] p-3"><p className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-[#1463d7]">Staff</p><p className="mt-1 text-xs leading-5 text-[#73849a]">Customers & support</p></div>
+          <div className="rounded-2xl border border-[#dce6f2] bg-[#f8fbff] p-3"><p className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-[#1463d7]">Technician</p><p className="mt-1 text-xs leading-5 text-[#73849a]">Assigned field jobs</p></div>
+        </div>
+        <p className="mt-5 text-xs leading-5 text-[#7d8da0]">Technicians join through an owner-issued invite from <span className="font-semibold text-[#31516f]">Team</span>. There is no public technician sign-up.</p>
+      </> : null}
+      <Link href="/" className="mt-6 inline-flex text-sm font-semibold text-[#1d4f89] hover:text-[#1463d7] hover:underline">Return to public website</Link>
+    </PortalAuthShell>
   );
 }

@@ -20,11 +20,11 @@ export function CatalogProductCard({ product }: CatalogProductCardProps) {
     <article className="surface-card group flex min-w-0 h-full flex-col overflow-hidden">
       <Link href={`/products/${product.id}`} className="block">
         <div className="relative overflow-hidden bg-[linear-gradient(180deg,rgba(245,248,252,0.98),rgba(232,238,248,0.9))]">
-          <div className="absolute inset-x-4 top-4 z-10 flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.12em] text-[#274b78] sm:text-[0.68rem]">
+          <div className="absolute inset-x-3 top-3 z-10 flex min-w-0 flex-wrap items-center gap-1.5 sm:inset-x-4 sm:top-4 sm:gap-2">
+            <span className="shrink-0 text-[0.6rem] font-bold uppercase tracking-[0.12em] text-[#274b78] sm:text-[0.68rem]">
               {product.brand}
             </span>
-            {badges.includes("Price Drop") ? <span className="shrink-0 rounded-full bg-brand-red px-2.5 py-1 text-[0.58rem] font-bold uppercase tracking-[0.11em] text-white">Price drop</span> : null}
+            {badges.includes("Price Drop") ? <span className="shrink-0 rounded-full bg-brand-red px-2 py-1 text-[0.55rem] font-bold uppercase tracking-[0.1em] text-white">Price drop</span> : null}
           </div>
 
           <div className="relative aspect-[4/3] overflow-hidden">

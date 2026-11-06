@@ -43,12 +43,12 @@ export function SiteHeader({ categoryMenuItems }: SiteHeaderProps) {
   return (
     <header className="sticky top-0 z-50 border-b border-[#dce6f2] bg-[#f8fbff]/95 backdrop-blur-xl print:hidden">
       <div className="bg-[#173f70] text-white">
-        <Container className="flex min-h-8 items-center justify-between gap-4 text-[0.58rem] font-semibold uppercase tracking-[0.16em] sm:text-[0.62rem]">
+        <Container className="flex min-h-7 items-center justify-between gap-4 text-[0.54rem] font-semibold uppercase tracking-[0.13em] sm:min-h-8 sm:text-[0.62rem] sm:tracking-[0.16em]">
           <span className="truncate">Ganesh Market, Narayangarh, Chitwan</span>
           <span className="hidden shrink-0 sm:inline">Sunday–Friday&nbsp; | &nbsp;9:00 AM–6:00 PM</span>
         </Container>
       </div>
-      <Container className="flex min-w-0 min-h-[3.6rem] items-center justify-between gap-4">
+      <Container className="flex min-w-0 min-h-[3.25rem] items-center justify-between gap-3 sm:min-h-[3.6rem] sm:gap-4">
         <Link href="/" aria-label={siteConfig.name} onClick={closeMenu} className="flex min-w-0 shrink items-center gap-3">
           <BrandLogo compact />
           <span className="hidden h-7 w-px bg-[#cbd8e7] sm:block" />
@@ -75,7 +75,7 @@ export function SiteHeader({ categoryMenuItems }: SiteHeaderProps) {
         </Container>
       </div>
 
-      {isOpen ? <div id="public-mobile-menu" className="absolute inset-x-3 top-[5.6rem] z-50 rounded-xl border border-[#dce6f2] bg-white p-3 shadow-[0_18px_48px_rgba(17,39,75,0.14)] lg:hidden"><nav className="grid gap-1" aria-label="Mobile navigation">{navigation.map((item) => <Link key={item.href} href={item.href} onClick={closeMenu} className="rounded-lg bg-[#f5f8fc] px-3 py-2.5 text-sm font-semibold text-[#38516f]">{item.label}</Link>)}<Link href="/portal/login" onClick={closeMenu} className="rounded-lg border border-[#dce6f2] px-3 py-2.5 text-center text-sm font-semibold text-[#1463d7]">Staff Portal Login</Link><a href={toTelHref(siteConfig.contact.primaryPhone)} onClick={closeMenu} className="action-primary w-full">Call {siteConfig.contact.primaryPhone}</a></nav></div> : null}
+      {isOpen ? <div id="public-mobile-menu" className="absolute inset-x-3 top-[5rem] z-50 rounded-2xl border border-[#dce6f2] bg-white p-3 shadow-[0_18px_48px_rgba(17,39,75,0.14)] lg:hidden"><nav className="grid gap-1" aria-label="Mobile navigation">{navigation.map((item) => <Link key={item.href} href={item.href} onClick={closeMenu} className="rounded-lg bg-[#f5f8fc] px-3 py-2.5 text-sm font-semibold text-[#38516f]">{item.label}</Link>)}<Link href="/portal/login" onClick={closeMenu} className="rounded-lg border border-[#dce6f2] px-3 py-2.5 text-center text-sm font-semibold text-[#1463d7]">Staff Portal Login</Link><a href={toTelHref(siteConfig.contact.primaryPhone)} onClick={closeMenu} className="action-primary w-full">Call {siteConfig.contact.primaryPhone}</a></nav></div> : null}
     </header>
   );
 }

@@ -53,24 +53,24 @@ export default function HomePage() {
       <JsonLd data={getOrganizationSchema()} />
       <JsonLd data={getWebSiteSchema()} />
 
-      <section className="px-4 pb-6 pt-5 sm:px-6 sm:pt-8 lg:px-6">
-        <Container className="px-0 overflow-hidden rounded-2xl border border-[#dce6f2] bg-white shadow-[0_12px_35px_rgba(25,65,115,0.07)]">
+      <section className="pb-6 pt-0">
+        <Container fullBleed className="overflow-hidden border-y border-[#dce6f2] bg-white shadow-[0_12px_35px_rgba(25,65,115,0.07)]">
           <div className="grid lg:grid-cols-[0.92fr_1.08fr]">
-            <div className="flex flex-col justify-center bg-[#f2f7fd] p-6 sm:p-10 lg:p-12">
+            <div className="flex flex-col justify-center bg-[#f2f7fd] p-5 sm:p-10 lg:p-12">
               <div className="flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-[#1463d7]"><span className="h-1.5 w-1.5 rounded-full bg-[#1fa36b]" />Ganesh Market · Narayangarh</div>
-              <h1 className="mt-4 max-w-xl font-heading text-3xl font-semibold leading-[1.08] tracking-tight text-[#123b75] sm:text-5xl">Security that starts with a conversation.</h1>
+              <h1 className="mt-4 max-w-xl font-heading text-[2.05rem] font-semibold leading-[1.05] tracking-tight text-[#123b75] sm:text-5xl">Security that starts with a conversation.</h1>
               <p className="mt-4 max-w-lg text-sm leading-6 text-[#66788f] sm:text-base">From a first question at our shop to a system that works at home, in a store, or across an office — Super Star Electronics is here for the whole journey.</p>
-              <div className="mt-6 flex flex-wrap gap-2.5"><a href={buildWhatsAppUrl({ type: "quote", subject: "a CCTV quotation" })} target="_blank" rel="noreferrer" className="action-primary">Start a conversation</a><Link href="/products" className="action-secondary">Explore products</Link></div>
+              <div className="mt-5 flex flex-wrap gap-2.5"><a href={buildWhatsAppUrl({ type: "quote", subject: "a CCTV quotation" })} target="_blank" rel="noreferrer" className="action-primary">Start a conversation</a><Link href="/products" className="action-secondary">Explore products</Link></div>
               <div className="mt-8 grid max-w-lg grid-cols-3 gap-3 border-t border-[#d7e3ef] pt-5"><div><p className="font-heading text-lg font-semibold text-[#123b75]">01</p><p className="mt-1 text-[0.68rem] leading-4 text-[#708198]">Tell us what needs protecting</p></div><div><p className="font-heading text-lg font-semibold text-[#123b75]">02</p><p className="mt-1 text-[0.68rem] leading-4 text-[#708198]">Plan the right coverage</p></div><div><p className="font-heading text-lg font-semibold text-[#123b75]">03</p><p className="mt-1 text-[0.68rem] leading-4 text-[#708198]">Keep it running after install</p></div></div>
             </div>
-            <div className="relative min-h-[360px] overflow-hidden bg-[#dfeaf3] sm:min-h-[440px]">
+            <div className="relative min-h-[300px] overflow-hidden bg-[#dfeaf3] sm:min-h-[440px]">
               <Image src="/story/owner-speaking.jpg" alt="Suvash Chandra Shah, owner of Super Star Electronics, speaking at a security industry event" fill priority sizes="(min-width: 1024px) 55vw, 100vw" className="object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#092b56]/75 via-transparent to-[#092b56]/5" />
               <div className="absolute bottom-5 left-5 max-w-[18rem] rounded-xl border border-white/30 bg-[#092b56]/80 px-4 py-3 text-white shadow-lg backdrop-blur-sm sm:bottom-7 sm:left-7"><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-[#b9d7ff]">The story starts here</p><p className="mt-1 text-sm font-medium leading-5">Real people, real products, and support that stays close to the customer.</p></div>
-              <div className="absolute right-5 top-5 h-24 w-24 overflow-hidden rounded-xl border-4 border-white bg-white shadow-lg sm:right-7 sm:top-7 sm:h-32 sm:w-32"><Image src="/story/owner-at-podium.jpg" alt="Suvash Chandra Shah, owner of Super Star Electronics, at a dealer summit" fill sizes="128px" className="object-cover" /></div>
+              <div className="absolute right-4 top-4 h-20 w-20 overflow-hidden rounded-xl border-4 border-white bg-white shadow-lg sm:right-7 sm:top-7 sm:h-32 sm:w-32"><Image src="/story/owner-at-podium.jpg" alt="Suvash Chandra Shah, owner of Super Star Electronics, at a dealer summit" fill sizes="128px" className="object-cover" /></div>
             </div>
           </div>
-          <div className="grid border-t border-[#dce6f2] sm:grid-cols-4">{offerHighlights.slice(0, 4).map((item) => <div key={item.title} className="flex items-center gap-2.5 border-b border-[#e8eef5] px-4 py-3 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0"><IconMark name={item.icon} className="h-8 w-8 shrink-0" /><div><p className="text-[0.68rem] font-semibold text-[#234a78]">{item.title}</p><p className="mt-0.5 text-[0.6rem] text-[#8190a1]">{item.detail}</p></div></div>)}</div>
+          <div className="grid grid-cols-2 border-t border-[#dce6f2] sm:grid-cols-4">{offerHighlights.slice(0, 4).map((item) => <div key={item.title} className="flex items-center gap-2 border-b border-[#e8eef5] px-3 py-3 last:border-b-0 sm:gap-2.5 sm:px-4 sm:py-3 sm:border-b-0 sm:border-r sm:last:border-r-0"><IconMark name={item.icon} className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" /><div><p className="text-[0.64rem] font-semibold text-[#234a78] sm:text-[0.68rem]">{item.title}</p><p className="mt-0.5 text-[0.57rem] leading-4 text-[#8190a1] sm:text-[0.6rem]">{item.detail}</p></div></div>)}</div>
         </Container>
       </section>
 

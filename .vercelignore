@@ -1,0 +1,26 @@
+.git
+.vercel
+node_modules
+
+# Local Next.js build output and alternate development builds
+.next
+.next-*
+
+# Local portal data and secrets
+/data
+.env*
+
+# Source-only assets and local planning files
+/brand-assets
+/Product-assets
+/color-pallete.*
+/logo.png
+/plan*.md
+/profile.md
+/Improvment.md
+
+# Local caches and logs
+/*.tsbuildinfo
+/npm-debug.log*
+/yarn-debug.log*
+/pnpm-debug.log*

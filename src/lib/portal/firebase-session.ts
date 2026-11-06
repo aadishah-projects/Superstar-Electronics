@@ -47,8 +47,8 @@ export async function getCurrentFirebasePortalUser() {
     if (!user?.isActive) return null;
     await ensureSqlitePortalShadowUser(user);
     return user;
-  } catch {
-    console.error("Firebase portal session verification failed.");
+  } catch (error) {
+    console.error("Firebase portal session verification failed.", error instanceof Error ? error.message : String(error));
     return null;
   }
 }

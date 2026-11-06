@@ -840,6 +840,7 @@ export function countUsers() {
 }
 
 export function createUser(input: {
+  id?: string;
   email: string;
   name: string;
   phone?: string | null;
@@ -847,7 +848,7 @@ export function createUser(input: {
   passwordHash: string;
 }) {
   const timestamp = nowIso();
-  const id = newId();
+  const id = input.id ?? newId();
   getPortalDatabase()
     .prepare(
       `INSERT INTO users (id, email, name, phone, role, password_hash, is_active, created_at, updated_at)

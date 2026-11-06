@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ChangeEventHandler } from "react";
 import type { ActivityRecord } from "@/lib/portal/types";
 
 export type PortalIconName =
@@ -136,6 +137,8 @@ export function PortalField({
   placeholder,
   required,
   defaultValue,
+  value,
+  onChange,
   min,
   step,
   options,
@@ -146,6 +149,8 @@ export function PortalField({
   placeholder?: string;
   required?: boolean;
   defaultValue?: string;
+  value?: string;
+  onChange?: ChangeEventHandler<HTMLInputElement>;
   min?: string;
   step?: string;
   options?: Array<{ value: string; label: string }>;
@@ -160,7 +165,7 @@ export function PortalField({
           {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
       ) : (
-        <input name={name} type={type} placeholder={placeholder} required={required} defaultValue={defaultValue} min={min} step={step} className={className} />
+        <input name={name} type={type} placeholder={placeholder} required={required} defaultValue={defaultValue} value={value} onChange={onChange} min={min} step={step} className={className} />
       )}
     </label>
   );

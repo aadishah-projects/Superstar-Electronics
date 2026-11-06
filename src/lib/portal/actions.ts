@@ -67,7 +67,24 @@ import {
 } from "@/lib/portal/db";
 import { getDefaultQuotationValidityDays, getDefaultWarrantyMonths, getPortalToday, getPortalVatRate, normalizePortalPhone } from "@/lib/portal/config";
 import { endPortalSession, requirePortalUser, startPortalSession } from "@/lib/portal/auth";
+import { getPortalAuthBackend } from "@/lib/portal/backend";
+import { ensureSqlitePortalShadowUser } from "@/lib/portal/shadow-user";
+import {
+  countFirestorePortalUsers,
+  createFirestorePortalInvite,
+  createFirestorePortalUser,
+  deleteFirestorePortalUser,
+  deactivateFirestorePortalUser,
+  getFirestorePortalInvite,
+  getFirestorePortalUser,
+  getFirestorePortalUserByEmail,
+  listFirestorePortalUsers,
+  markFirestorePortalInviteUsed,
+  updateFirestorePortalUserPhone,
+  updateFirestorePortalUserRole,
+} from "@/lib/portal/firestore-users";
 import { sendPortalEmail } from "@/lib/portal/notifications";
+import { buildR2AttachmentKey, markR2StoredName, putPrivateR2Object, shouldUseR2Attachments, deletePrivateR2Object } from "@/lib/integrations/r2";
 import type { ProductImportRow } from "@/lib/portal/product-csv";
 import {
   customerTypes,
@@ -455,7 +472,9 @@ export async function logoutAction() {
 
 export async function setupOwnerAction(_: ActionState, formData: FormData): Promise<ActionState> {
   try {
-    if (countUsers() > 0) {
+    const authBackend = getPortalAuthBackend();
+    const hasUsers = authBackend === "firestore" ? (await countFirestorePortalUsers()) > 0 : countUsers() > 0;
+    if (hasUsers) {
       return { error: "The initial owner setup has already been completed." };
     }
 
@@ -481,14 +500,25 @@ export async function setupOwnerAction(_: ActionState, formData: FormData): Prom
       return { error: `Use the configured owner email: ${configuredEmail}` };
     }
 
-    const userId = createUser({
-      email,
-      name,
-      phone,
-      role: "owner",
-      passwordHash: await bcrypt.hash(password, 12),
-    });
-    recordActivity({ entityType: "user", entityId: userId, action: "created_initial_owner", actorId: userId });
+    if (authBackend === "firestore") {
+      const userId = await createFirestorePortalUser({ email, name, phone, role: "owner", password });
+      try {
+        await ensureSqlitePortalShadowUser({ id: userId, email, name, phone, role: "owner" });
+      } catch (error) {
+        await deleteFirestorePortalUser(userId);
+        throw error;
+      }
+      recordActivity({ entityType: "user", entityId: userId, action: "created_initial_owner", actorId: userId });
+    } else {
+      const userId = createUser({
+        email,
+        name,
+        phone,
+        role: "owner",
+        passwordHash: await bcrypt.hash(password, 12),
+      });
+      recordActivity({ entityType: "user", entityId: userId, action: "created_initial_owner", actorId: userId });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to create the initial owner account.") };
   }
@@ -515,13 +545,14 @@ export async function createInviteAction(_: ActionState, formData: FormData): Pr
     });
     const email = normalizeEmail(input.email);
 
-    if (getUserByEmail(email)) {
+    const existingUser = getPortalAuthBackend() === "firestore" ? await getFirestorePortalUserByEmail(email) : getUserByEmail(email);
+    if (existingUser) {
       return { error: "An account with that email already exists." };
     }
 
     const rawToken = createToken();
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
-    createInvite({
+    const invite = {
       tokenHash: hashToken(rawToken),
       email,
       name: input.name,
@@ -529,7 +560,12 @@ export async function createInviteAction(_: ActionState, formData: FormData): Pr
       role: input.role,
       invitedBy: owner.id,
       expiresAt,
-    });
+    };
+    if (getPortalAuthBackend() === "firestore") {
+      await createFirestorePortalInvite(invite);
+    } else {
+      createInvite(invite);
+    }
 
     return {
       success: "Invite created. Share this one-time link securely.",
@@ -546,15 +582,25 @@ export async function updatePortalUserRoleAction(_: ActionState, formData: FormD
   try {
     const userId = text(formData, "userId");
     const role = z.enum(portalRoles).parse(text(formData, "role"));
-    const target = getPortalDatabase().prepare("SELECT id, name, email, role, is_active FROM users WHERE id = ? LIMIT 1").get(userId) as { id: string; name: string; email: string; role: typeof role; is_active: number } | undefined;
+    const firestoreBackend = getPortalAuthBackend() === "firestore";
+    const target = firestoreBackend
+      ? await getFirestorePortalUser(userId)
+      : getPortalDatabase().prepare("SELECT id, name, email, role, is_active FROM users WHERE id = ? LIMIT 1").get(userId) as { id: string; name: string; email: string; role: typeof role; is_active: number } | undefined;
     if (!target) return { error: "That team member no longer exists." };
     if (target.id === owner.id) return { error: "You cannot change your own role from this screen." };
     if (target.role === "owner" && role !== "owner") {
-      const activeOwners = getPortalDatabase().prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'owner' AND is_active = 1").get() as { count: number };
-      if (Number(activeOwners.count) <= 1) return { error: "Keep at least one active owner before changing this role." };
+      const activeOwnerCount = firestoreBackend
+        ? (await listFirestorePortalUsers()).filter((user) => user.isActive && user.role === "owner").length
+        : Number((getPortalDatabase().prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'owner' AND is_active = 1").get() as { count: number }).count);
+      if (activeOwnerCount <= 1) return { error: "Keep at least one active owner before changing this role." };
     }
 
-    updateUserRole(target.id, role);
+    if (firestoreBackend) {
+      await updateFirestorePortalUserRole(target.id, role);
+      updateUserRole(target.id, role);
+    } else {
+      updateUserRole(target.id, role);
+    }
     recordActivity({ entityType: "user", entityId: target.id, action: "role_updated", actorId: owner.id, details: { from: target.role, to: role } });
     revalidatePath("/portal/team");
     return { success: `${target.name} is now a ${portalRoleLabels[role]}.` };
@@ -567,20 +613,44 @@ const passwordSchema = z.string().min(12, "Use at least 12 characters for the pa
 
 export async function acceptInviteAction(token: string, _: ActionState, formData: FormData): Promise<ActionState> {
   try {
-    const invite = getInvite(hashToken(token));
-    if (!invite || invite.used_at || invite.expires_at <= nowIso()) {
+    const tokenHash = hashToken(token);
+    const firestoreBackend = getPortalAuthBackend() === "firestore";
+    const firestoreInvite = firestoreBackend ? await getFirestorePortalInvite(tokenHash) : null;
+    const sqliteInvite = firestoreBackend ? null : getInvite(tokenHash);
+    const invite = firestoreInvite ?? (sqliteInvite ? {
+      email: sqliteInvite.email,
+      name: sqliteInvite.name,
+      phone: sqliteInvite.phone,
+      role: sqliteInvite.role,
+      usedAt: sqliteInvite.used_at,
+      expiresAt: sqliteInvite.expires_at,
+      tokenHash: sqliteInvite.token_hash,
+    } : null);
+    if (!invite || invite.usedAt || invite.expiresAt <= nowIso()) {
       return { error: "This invite is invalid or has expired." };
     }
 
     const password = passwordSchema.parse(text(formData, "password"));
-    const userId = createUser({
-      email: invite.email,
-      name: invite.name,
-      phone: invite.phone,
-      role: invite.role,
-      passwordHash: await bcrypt.hash(password, 12),
-    });
-    markInviteUsed(invite.token_hash);
+    let userId: string;
+    if (firestoreBackend) {
+      userId = await createFirestorePortalUser({ email: invite.email, name: invite.name, phone: invite.phone, role: invite.role, password });
+      try {
+        await ensureSqlitePortalShadowUser({ id: userId, email: invite.email, name: invite.name, phone: invite.phone, role: invite.role });
+      } catch (error) {
+        await deleteFirestorePortalUser(userId);
+        throw error;
+      }
+      await markFirestorePortalInviteUsed(invite.tokenHash);
+    } else {
+      userId = createUser({
+        email: invite.email,
+        name: invite.name,
+        phone: invite.phone,
+        role: invite.role,
+        passwordHash: await bcrypt.hash(password, 12),
+      });
+      markInviteUsed(invite.tokenHash);
+    }
     recordActivity({ entityType: "user", entityId: userId, action: "accepted_invite", actorId: userId });
   } catch (error) {
     return { error: safeError(error, "Unable to activate this account.") };
@@ -598,7 +668,12 @@ export async function updatePortalProfileAction(_: ActionState, formData: FormDa
 
   try {
     const input = profileSchema.parse({ phone: text(formData, "phone") });
-    updateUserPhone(user.id, input.phone);
+    if (getPortalAuthBackend() === "firestore") {
+      await updateFirestorePortalUserPhone(user.id, input.phone);
+      updateUserPhone(user.id, input.phone);
+    } else {
+      updateUserPhone(user.id, input.phone);
+    }
     recordActivity({ entityType: "user", entityId: user.id, action: "contact_phone_updated", actorId: user.id });
   } catch (error) {
     return { error: safeError(error, "Unable to update your contact number.") };
@@ -1521,6 +1596,26 @@ async function saveTicketAttachment(ticketId: string, file: File, uploadedBy: st
   const attachmentId = newId();
   const extension = path.extname(file.name).toLowerCase().slice(0, 10);
   const storedName = `${attachmentId}${extension}`;
+  if (shouldUseR2Attachments()) {
+    const key = buildR2AttachmentKey({ kind: "tickets", entityId: ticketId, attachmentId, extension });
+    await putPrivateR2Object({ key, body: new Uint8Array(await file.arrayBuffer()), contentType: file.type });
+    try {
+      insertTicketAttachment({
+        id: attachmentId,
+        ticketId,
+        originalName: file.name.slice(0, 180),
+        storedName: markR2StoredName(key),
+        mimeType: file.type,
+        sizeBytes: file.size,
+        uploadedBy,
+      });
+    } catch (error) {
+      await deletePrivateR2Object(key).catch(() => undefined);
+      throw error;
+    }
+    return;
+  }
+
   const directory = path.join(process.cwd(), "data", "portal-uploads", ticketId);
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(path.join(directory, storedName), Buffer.from(await file.arrayBuffer()));
@@ -1544,6 +1639,26 @@ async function saveJobAttachment(jobId: string, file: File, uploadedBy: string) 
   const attachmentId = newId();
   const extension = path.extname(file.name).toLowerCase().slice(0, 10);
   const storedName = `${attachmentId}${extension}`;
+  if (shouldUseR2Attachments()) {
+    const key = buildR2AttachmentKey({ kind: "jobs", entityId: jobId, attachmentId, extension });
+    await putPrivateR2Object({ key, body: new Uint8Array(await file.arrayBuffer()), contentType: file.type });
+    try {
+      insertJobAttachment({
+        id: attachmentId,
+        jobId,
+        originalName: file.name.slice(0, 180),
+        storedName: markR2StoredName(key),
+        mimeType: file.type,
+        sizeBytes: file.size,
+        uploadedBy,
+      });
+    } catch (error) {
+      await deletePrivateR2Object(key).catch(() => undefined);
+      throw error;
+    }
+    return;
+  }
+
   const directory = path.join(process.cwd(), "data", "portal-uploads", "jobs", jobId);
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(path.join(directory, storedName), Buffer.from(await file.arrayBuffer()));
@@ -1559,6 +1674,25 @@ async function saveCustomerTicketAttachment(ticketId: string, file: File) {
   const attachmentId = newId();
   const extension = path.extname(file.name).toLowerCase().slice(0, 10);
   const storedName = `${attachmentId}${extension}`;
+  if (shouldUseR2Attachments()) {
+    const key = buildR2AttachmentKey({ kind: "tickets", entityId: ticketId, attachmentId, extension });
+    await putPrivateR2Object({ key, body: new Uint8Array(await file.arrayBuffer()), contentType: file.type });
+    try {
+      insertCustomerTicketAttachment({
+        id: attachmentId,
+        ticketId,
+        originalName: file.name.slice(0, 180),
+        storedName: markR2StoredName(key),
+        mimeType: file.type,
+        sizeBytes: file.size,
+      });
+    } catch (error) {
+      await deletePrivateR2Object(key).catch(() => undefined);
+      throw error;
+    }
+    return;
+  }
+
   const directory = path.join(process.cwd(), "data", "portal-uploads", ticketId);
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(path.join(directory, storedName), Buffer.from(await file.arrayBuffer()));
@@ -2001,7 +2135,14 @@ export async function revokePortalSessionForUser(userId: string) {
     return { error: "You cannot deactivate your own account." };
   }
 
-  getPortalDatabase().prepare("UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?").run(nowIso(), userId);
+  if (getPortalAuthBackend() === "firestore") {
+    const target = await getFirestorePortalUser(userId);
+    if (!target) return { error: "That team member no longer exists." };
+    await deactivateFirestorePortalUser(userId);
+    getPortalDatabase().prepare("UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?").run(nowIso(), userId);
+  } else {
+    getPortalDatabase().prepare("UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?").run(nowIso(), userId);
+  }
   recordActivity({ entityType: "user", entityId: userId, action: "deactivated", actorId: owner.id });
   revalidatePath("/portal/team");
   return { success: "Account deactivated." };

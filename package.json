@@ -12,8 +12,12 @@
     "sync:product-assets": "python scripts/import_product_assets.py"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1163.0",
+    "@aws-sdk/s3-request-presigner": "^3.1163.0",
     "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^3.0.3",
+    "firebase": "^13.2.0",
+    "firebase-admin": "^14.5.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",

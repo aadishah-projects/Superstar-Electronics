@@ -8,6 +8,8 @@ import {
   hashToken,
 } from "@/lib/portal/db";
 import type { PortalRole, PortalUser } from "@/lib/portal/types";
+import { getPortalAuthBackend } from "@/lib/portal/backend";
+import { endFirebasePortalSession, getCurrentFirebasePortalUser } from "@/lib/portal/firebase-session";
 
 const sessionCookieName = "sse_portal_session";
 const defaultSessionDays = 7;
@@ -45,6 +47,11 @@ export async function startPortalSession(userId: string) {
 }
 
 export async function endPortalSession() {
+  if (getPortalAuthBackend() === "firestore") {
+    await endFirebasePortalSession();
+    return;
+  }
+
   const cookieStore = await cookies();
   const rawToken = cookieStore.get(sessionCookieName)?.value;
 
@@ -56,6 +63,10 @@ export async function endPortalSession() {
 }
 
 export async function getCurrentPortalUser() {
+  if (getPortalAuthBackend() === "firestore") {
+    return getCurrentFirebasePortalUser();
+  }
+
   const cookieStore = await cookies();
   const rawToken = cookieStore.get(sessionCookieName)?.value;
   return rawToken ? toPortalUser(getUserBySessionHash(hashToken(rawToken))) : null;

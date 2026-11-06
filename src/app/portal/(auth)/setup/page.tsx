@@ -4,6 +4,8 @@ import { PortalAuthShell } from "@/components/portal/portal-auth-shell";
 import { SetupOwnerForm } from "@/components/portal/portal-forms";
 import { getCurrentPortalUser } from "@/lib/portal/auth";
 import { countUsers } from "@/lib/portal/db";
+import { countFirestorePortalUsers } from "@/lib/portal/firestore-users";
+import { getPortalAuthBackend } from "@/lib/portal/backend";
 
 export const runtime = "nodejs";
 
@@ -12,7 +14,8 @@ export default async function PortalSetupPage() {
     redirect("/portal/dashboard");
   }
 
-  if (countUsers() > 0) {
+  const hasUsers = getPortalAuthBackend() === "firestore" ? (await countFirestorePortalUsers()) > 0 : countUsers() > 0;
+  if (hasUsers) {
     redirect("/portal/login");
   }
 

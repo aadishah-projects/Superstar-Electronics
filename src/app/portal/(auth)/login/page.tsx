@@ -2,8 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PortalAuthShell } from "@/components/portal/portal-auth-shell";
 import { LoginForm } from "@/components/portal/portal-forms";
+import { FirebaseLoginForm } from "@/components/portal/firebase-login-form";
 import { getCurrentPortalUser } from "@/lib/portal/auth";
 import { countUsers } from "@/lib/portal/db";
+import { countFirestorePortalUsers } from "@/lib/portal/firestore-users";
+import { getPortalAuthBackend } from "@/lib/portal/backend";
 
 export const runtime = "nodejs";
 
@@ -12,11 +15,12 @@ export default async function PortalLoginPage() {
     redirect("/portal/dashboard");
   }
 
-  const hasUsers = countUsers() > 0;
+  const authBackend = getPortalAuthBackend();
+  const hasUsers = authBackend === "firestore" ? (await countFirestorePortalUsers()) > 0 : countUsers() > 0;
 
   return (
     <PortalAuthShell eyebrow="Private workspace" title="Sign in to the business portal" description="For authorized owners, website managers, staff, and technicians. Customers can submit support requests from the public website.">
-      {hasUsers ? <LoginForm /> : (
+      {hasUsers ? (authBackend === "firestore" ? <FirebaseLoginForm /> : <LoginForm />) : (
         <div className="mt-8 rounded-2xl border border-[#b9d5fb] bg-[#eef5ff] p-4 text-sm leading-6 text-[#1b559f]">
           No owner account exists yet. Complete the secure <Link href="/portal/setup" className="font-semibold underline underline-offset-2">initial setup</Link> first.
         </div>

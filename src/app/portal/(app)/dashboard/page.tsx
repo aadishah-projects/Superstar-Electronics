@@ -5,6 +5,8 @@ import { ProfileForm } from "@/components/portal/portal-forms";
 import { PortalIcon, PortalStatusBadge, formatPortalDateTime } from "@/components/portal/portal-ui";
 import { requirePortalUser } from "@/lib/portal/auth";
 import { ensureDueFollowUpNotifications } from "@/lib/portal/db";
+import { isFirestorePortalBackend } from "@/lib/portal/backend";
+import { ensureFirestoreDueFollowUpNotifications } from "@/lib/portal/firestore-data";
 import { getJobLocationLabel } from "@/lib/portal/maps";
 import { getActivityFeed, getDashboardMetrics, getNotifications, getServiceJobs } from "@/lib/portal/queries";
 
@@ -25,7 +27,8 @@ const metricStyles = [
 
 export default async function PortalDashboardPage({ searchParams }: { searchParams: Promise<{ error?: string; saved?: string }> }) {
   const user = await requirePortalUser();
-  ensureDueFollowUpNotifications();
+  if (isFirestorePortalBackend()) await ensureFirestoreDueFollowUpNotifications();
+  else ensureDueFollowUpNotifications();
   const [metrics, activity, notifications, jobs] = await Promise.all([getDashboardMetrics(), getActivityFeed(), getNotifications(user.id), getServiceJobs({ role: user.role, userId: user.id })]);
   const params = await searchParams;
   const activeJobs = jobs.filter((job) => !["completed", "cancelled", "expired"].includes(job.status));

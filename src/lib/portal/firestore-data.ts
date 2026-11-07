@@ -454,6 +454,32 @@ export async function createFirestoreNotification(input: { id: string; userId: s
   await write(portalCollections.notifications, input.id, { userId: input.userId, type: input.type, title: input.title, message: input.message, entityType: input.entityType, entityId: input.entityId, readAt: null, createdAt: timestamp() });
 }
 
+export async function ensureFirestoreDueFollowUpNotifications() {
+  const [enquiries, users, notifications] = await Promise.all([
+    getFirestoreEnquiries(),
+    listFirestorePortalUsers(),
+    all<StoredRecord>(portalCollections.notifications),
+  ]);
+  const now = timestamp();
+  const dueEnquiries = enquiries.filter((enquiry) => enquiry.followUpAt && enquiry.followUpAt <= now && !["converted", "lost"].includes(enquiry.status));
+  const recipients = users.filter((user) => user.isActive && ["owner", "manager", "staff"].includes(user.role));
+  const existing = new Set(notifications.filter((notification) => notification.type === "overdue-follow-up").map((notification) => `${text(notification.userId)}:${text(notification.entityId)}`));
+  const writes = dueEnquiries.flatMap((enquiry) => recipients.flatMap((recipient) => {
+    const key = `${recipient.id}:${enquiry.id}`;
+    if (existing.has(key)) return [];
+    return [{
+      id: `overdue-follow-up-${recipient.id}-${enquiry.id}`,
+      userId: recipient.id,
+      type: "overdue-follow-up",
+      title: "Follow-up is due",
+      message: `${enquiry.reference} needs a follow-up for ${enquiry.customerName}.`,
+      entityType: "enquiry",
+      entityId: enquiry.id,
+    }];
+  }));
+  await Promise.all(writes.map((notification) => createFirestoreNotification(notification)));
+}
+
 export async function markFirestoreNotificationRead(id: string, userId: string) {
   const current = await read<StoredRecord>(portalCollections.notifications, id);
   if (current?.userId === userId) await write(portalCollections.notifications, id, { readAt: timestamp() }, true);

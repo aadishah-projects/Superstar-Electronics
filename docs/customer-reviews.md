@@ -30,11 +30,25 @@ The R2 bucket should remain private. Customers do not need access to it. The ser
 
 Before sending a photo to the server, the review page resizes and compresses it in the customer's browser so normal phone-camera images stay within the hosting request-size limit.
 
-The Next.js review endpoint follows Apps Script ContentService redirects manually. If Google briefly returns a 404 for the one-time `googleusercontent.com` response URL, the endpoint retries that response URL without repeating the original POST. This avoids duplicate Sheet rows when the Apps Script execution has already completed.
-
 ## Storage configuration
 
 Review photos use the separate private R2 configuration `REVIEW_R2_BUCKET_NAME`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID_2`, and `R2_SECRET_ACCESS_KEY_2`. The existing unsuffixed R2 variables remain reserved for portal attachments. Review records use the existing Firebase Admin credentials and the `customer_reviews` Firestore collection.
+
+The review endpoint does not use `REVIEW_UPLOAD_URL`, Google Apps Script, Google Drive, or Google Sheets. The R2 credentials are server-only and must never be exposed in client-side code.
+
+## Firestore record
+
+Each submission creates one document in `customer_reviews` with the rating, generated review text, selected template IDs, creation time, and—when supplied—the private R2 object key and original photo name.
+
+## R2 object layout
+
+Review photos are stored privately under:
+
+```text
+review-photos/YYYY-MM-DD/<random-id>.jpg
+```
+
+Customers do not receive access to these objects. They upload the same photo separately to Google when submitting the public review.
 
 ## Testing
 

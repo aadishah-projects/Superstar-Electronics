@@ -98,4 +98,4 @@ If you want, I can next do one of these for you:
 
 **Customer Reviews**
 
-The customer review flow, Google handoff, private Drive/Sheets storage, Apps Script payload, and testing notes are documented in [docs/customer-reviews.md](docs/customer-reviews.md).
+The customer review flow, Google handoff, private R2 photo storage, Firestore records, and testing notes are documented in [docs/customer-reviews.md](docs/customer-reviews.md).

@@ -95,3 +95,7 @@ If you want, I can next do one of these for you:
 2. improve the homepage design,
 3. add gallery/testimonials,
 4. prepare it for deployment.
+
+**Customer Reviews**
+
+The customer review flow, Google handoff, private Drive/Sheets storage, Apps Script payload, and testing notes are documented in [docs/customer-reviews.md](docs/customer-reviews.md).

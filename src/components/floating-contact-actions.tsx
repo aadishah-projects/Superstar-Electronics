@@ -6,7 +6,7 @@ import { buildWhatsAppUrl, toTelHref } from "@/lib/urls";
 
 export function FloatingContactActions() {
   const pathname = usePathname();
-  if (pathname.startsWith("/portal")) return null;
+  if (pathname.startsWith("/portal") || pathname.startsWith("/review")) return null;
 
   return (
     <div className="pointer-events-none fixed inset-x-2 bottom-2 z-40 pb-[env(safe-area-inset-bottom)] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:pb-0 print:hidden">

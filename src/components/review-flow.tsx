@@ -84,9 +84,13 @@ function buildReviewText(rating: number, options: ReviewOption[]) {
 const GOOGLE_BUSINESS_URL = "https://g.page/r/CZASJStIzwKxEBM/review";
 
 async function copyToClipboard(value: string) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value);
-    return;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // Some mobile browsers deny clipboard access after an asynchronous step.
   }
 
   const helper = document.createElement("textarea");
@@ -96,8 +100,13 @@ async function copyToClipboard(value: string) {
   helper.style.opacity = "0";
   document.body.appendChild(helper);
   helper.select();
-  document.execCommand("copy");
-  helper.remove();
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    helper.remove();
+  }
 }
 
 function blobToBase64(blob: Blob) {
@@ -252,6 +261,9 @@ export function ReviewFlow() {
 
     setFlowError("");
     setGoogleBlocked(false);
+    // Start copying during the button gesture. Mobile browsers may reject a
+    // clipboard request started only after the upload has finished.
+    const copyAttempt = copyToClipboard(reviewText);
     setSaving(true);
 
     try {
@@ -281,8 +293,11 @@ export function ReviewFlow() {
         setSaved(true);
       }
 
-      await copyToClipboard(reviewText);
-      setCopied(true);
+      const didCopy = await copyAttempt;
+      setCopied(didCopy);
+      if (!didCopy) {
+        setFlowError("Your feedback was saved. Your phone blocked automatic copying; copy the review text shown above before submitting on Google.");
+      }
     } catch (error) {
       setCopied(false);
       setFlowError(error instanceof Error && error.message ? error.message : "We could not save your feedback. Please try again.");

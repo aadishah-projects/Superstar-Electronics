@@ -242,9 +242,9 @@ export function ReviewFlow() {
 
       await copyToClipboard(reviewText);
       setCopied(true);
-    } catch {
+    } catch (error) {
       setCopied(false);
-      setFlowError("We could not save your feedback. Please try again.");
+      setFlowError(error instanceof Error && error.message ? error.message : "We could not save your feedback. Please try again.");
       setSaving(false);
       return;
     }

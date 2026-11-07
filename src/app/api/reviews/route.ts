@@ -74,6 +74,10 @@ export async function POST(request: Request) {
     }
 
     if (!upstream.ok || upstreamResult.ok !== true) {
+      console.error("Review upload failed", {
+        status: upstream.status,
+        error: upstreamResult.error || "Google Apps Script returned an unsuccessful response.",
+      });
       return NextResponse.json(
         { ok: false, error: upstreamResult.error || "We could not save your feedback." },
         { status: 502 },
@@ -82,6 +86,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    console.error("Review upload request failed", error instanceof Error ? error.message : "Unknown review upload error");
     return NextResponse.json(
       { ok: false, error: error instanceof Error ? error.message : "We could not save your feedback." },
       { status: 500 },

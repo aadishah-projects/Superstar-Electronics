@@ -147,7 +147,8 @@ export async function POST(request: Request) {
       upstreamResult = { ok: false, error: "Google Apps Script returned an unexpected response." };
     }
 
-    if (upstream.responseLostAfterRedirect) {
+    const responseWasLostAfterAppsScriptRun = upstream.status === 404 && upstream.contentType.includes("text/html");
+    if (upstream.responseLostAfterRedirect || responseWasLostAfterAppsScriptRun) {
       console.warn("Apps Script accepted the review, but its one-time response URL returned 404; continuing without repeating the POST.");
       return NextResponse.json({ ok: true, responseUnconfirmed: true });
     }

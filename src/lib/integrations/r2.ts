@@ -42,6 +42,66 @@ export function shouldUseR2Attachments() {
 }
 
 let r2Client: S3Client | undefined;
+let reviewR2Client: S3Client | undefined;
+
+function getReviewR2Config() {
+  const accountId = process.env.R2_ACCOUNT_ID || process.env.CLOUDFLARE_R2_ACCOUNT_ID;
+  const bucketName = process.env.REVIEW_R2_BUCKET_NAME;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID_2 || process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY_2 || process.env.R2_SECRET_ACCESS_KEY;
+
+  if (!accountId || !bucketName || !accessKeyId || !secretAccessKey) {
+    throw new Error("Review R2 storage is not fully configured.");
+  }
+
+  return {
+    bucketName,
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    accessKeyId,
+    secretAccessKey,
+  };
+}
+
+export function hasReviewR2Config() {
+  return Boolean(
+    process.env.R2_ACCOUNT_ID &&
+      process.env.REVIEW_R2_BUCKET_NAME &&
+      (process.env.R2_ACCESS_KEY_ID_2 || process.env.R2_ACCESS_KEY_ID) &&
+      (process.env.R2_SECRET_ACCESS_KEY_2 || process.env.R2_SECRET_ACCESS_KEY),
+  );
+}
+
+function getReviewR2Client() {
+  if (!reviewR2Client) {
+    const config = getReviewR2Config();
+    reviewR2Client = new S3Client({
+      region: "auto",
+      endpoint: config.endpoint,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+    });
+  }
+  return reviewR2Client;
+}
+
+export async function putPrivateReviewR2Object(input: {
+  key: string;
+  body: Uint8Array;
+  contentType: string;
+}) {
+  const config = getReviewR2Config();
+  await getReviewR2Client().send(
+    new PutObjectCommand({
+      Bucket: config.bucketName,
+      Key: input.key,
+      Body: input.body,
+      ContentType: input.contentType,
+      ContentLength: input.body.byteLength,
+    }),
+  );
+}
 
 export function getR2BucketName() {
   return getR2Config().bucketName;

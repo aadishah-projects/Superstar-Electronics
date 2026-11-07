@@ -43,6 +43,8 @@ REVIEW_UPLOAD_URL=https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
 
 Keep the real value in `.env.local` for local development and in the Vercel production environment. The committed `.env.example` contains only a placeholder.
 
+Review photos use the separate private R2 configuration `REVIEW_R2_BUCKET_NAME`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID_2`, and `R2_SECRET_ACCESS_KEY_2`. The existing unsuffixed R2 variables remain reserved for portal attachments.
+
 ## Apps Script contract
 
 The Apps Script deployment must be a Web app configured to execute as the owner and allow anonymous access, because customers do not sign in. It should expose `doGet` for a health check and `doPost` for submissions.

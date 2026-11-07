@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { hasR2Config, putPrivateR2Object } from "@/lib/integrations/r2";
+import { hasReviewR2Config, putPrivateReviewR2Object } from "@/lib/integrations/r2";
 
 export const runtime = "nodejs";
 
@@ -134,13 +134,13 @@ export async function POST(request: Request) {
 
     let r2Key = "";
     if (photo) {
-      if (!hasR2Config()) {
+      if (!hasReviewR2Config()) {
         return NextResponse.json({ ok: false, error: "Photo storage is not configured." }, { status: 503 });
       }
 
       r2Key = `review-photos/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.jpg`;
       try {
-        await putPrivateR2Object({
+        await putPrivateReviewR2Object({
           key: r2Key,
           body: Buffer.from(photo.base64, "base64"),
           contentType: "image/jpeg",

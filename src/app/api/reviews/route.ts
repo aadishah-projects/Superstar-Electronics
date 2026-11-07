@@ -19,6 +19,65 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+const redirectStatuses = new Set([301, 302, 303, 307, 308]);
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function fetchAppsScriptResponse(endpoint: string, body: string) {
+  const initialResponse = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+    body,
+    cache: "no-store",
+    redirect: "manual",
+  });
+
+  if (!redirectStatuses.has(initialResponse.status)) {
+    return {
+      status: initialResponse.status,
+      contentType: initialResponse.headers.get("content-type") || "",
+      text: await initialResponse.text(),
+    };
+  }
+
+  let location = initialResponse.headers.get("location");
+  if (!location) {
+    return { status: initialResponse.status, contentType: "", text: "" };
+  }
+
+  let lastResponse = initialResponse;
+  let lastText = "";
+
+  // Apps Script ContentService can briefly return 404 while its one-time
+  // googleusercontent.com response URL is being made available. Retry the
+  // response URL only; never repeat the POST, which could create duplicates.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (attempt > 0) await wait(attempt * 1500);
+
+    const responseUrl = new URL(location, endpoint).toString();
+    lastResponse = await fetch(responseUrl, {
+      method: "GET",
+      cache: "no-store",
+      redirect: "manual",
+    });
+    lastText = await lastResponse.text();
+
+    if (!redirectStatuses.has(lastResponse.status)) break;
+
+    const nextLocation = lastResponse.headers.get("location");
+    if (!nextLocation) break;
+    location = nextLocation;
+  }
+
+  return {
+    status: lastResponse.status,
+    contentType: lastResponse.headers.get("content-type") || "",
+    text: lastText,
+  };
+}
+
 export async function POST(request: Request) {
   const endpoint = process.env.REVIEW_UPLOAD_URL;
 
@@ -54,17 +113,14 @@ export async function POST(request: Request) {
       photo = { name: photoName, mimeType, base64 };
     }
 
-    const upstream = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-      body: new URLSearchParams({
+    const upstream = await fetchAppsScriptResponse(
+      endpoint,
+      new URLSearchParams({
         payload: JSON.stringify({ rating, reviewText, templateId, photo }),
-      }),
-      cache: "no-store",
-      redirect: "follow",
-    });
+      }).toString(),
+    );
 
-    const upstreamText = await upstream.text();
+    const upstreamText = upstream.text;
     let upstreamResult: { ok?: boolean; error?: string } = {};
 
     try {
@@ -73,13 +129,14 @@ export async function POST(request: Request) {
       upstreamResult = { ok: false, error: "Google Apps Script returned an unexpected response." };
     }
 
-    if (!upstream.ok || upstreamResult.ok !== true) {
+    if (upstream.status < 200 || upstream.status >= 300 || upstreamResult.ok !== true) {
       console.error("Review upload failed", {
         status: upstream.status,
+        contentType: upstream.contentType,
         error: upstreamResult.error || "Google Apps Script returned an unsuccessful response.",
       });
       return NextResponse.json(
-        { ok: false, error: upstreamResult.error || "We could not save your feedback." },
+        { ok: false, error: upstreamResult.error || `Google Apps Script returned HTTP ${upstream.status}.` },
         { status: 502 },
       );
     }

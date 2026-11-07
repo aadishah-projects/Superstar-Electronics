@@ -149,8 +149,11 @@ export async function POST(request: Request) {
 
     const responseWasLostAfterAppsScriptRun = upstream.status === 404 && upstream.contentType.includes("text/html");
     if (upstream.responseLostAfterRedirect || responseWasLostAfterAppsScriptRun) {
-      console.warn("Apps Script accepted the review, but its one-time response URL returned 404; continuing without repeating the POST.");
-      return NextResponse.json({ ok: true, responseUnconfirmed: true });
+      console.error("Apps Script ran but did not return a save confirmation.");
+      return NextResponse.json(
+        { ok: false, error: "Google completed the request but did not confirm that the feedback was saved. Please try again after checking the storage settings." },
+        { status: 502 },
+      );
     }
 
     if (upstream.status < 200 || upstream.status >= 300 || upstreamResult.ok !== true) {

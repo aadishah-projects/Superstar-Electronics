@@ -16,7 +16,14 @@ export default async function PortalLoginPage() {
   }
 
   const authBackend = getPortalAuthBackend();
-  const hasUsers = authBackend === "firestore" ? (await countFirestorePortalUsers()) > 0 : countUsers() > 0;
+  let hasUsers = false;
+  try {
+    // If Firestore is temporarily quota-limited, still render the Firebase
+    // sign-in form so an existing staff member receives a useful login path.
+    hasUsers = authBackend === "firestore" ? (await countFirestorePortalUsers()) > 0 : countUsers() > 0;
+  } catch {
+    hasUsers = authBackend === "firestore";
+  }
 
   return (
     <PortalAuthShell eyebrow="Private workspace" title="Sign in to the business portal" description="For authorized owners, website managers, staff, and technicians. Customers can submit support requests from the public website.">

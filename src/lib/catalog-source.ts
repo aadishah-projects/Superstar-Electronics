@@ -62,7 +62,10 @@ function buildManagedSnapshot(products: Array<{
 }
 
 export async function getCatalogSnapshot() {
-  const useManagedCatalog = process.env.PORTAL_CATALOG_SOURCE === "database" || isFirestorePortalBackend();
+  // Keep the public catalogue independent from the staff portal backend. The
+  // portal may use Firestore for internal data, while public pages should use
+  // the checked-in catalogue unless database-backed publishing is explicitly enabled.
+  const useManagedCatalog = process.env.PORTAL_CATALOG_SOURCE === "database";
   if (!useManagedCatalog) {
     return { categories: staticCategories, products: staticProducts, syncedAt: catalogSyncedAt };
   }

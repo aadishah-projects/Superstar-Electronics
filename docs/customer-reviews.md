@@ -29,6 +29,8 @@ Review page
 
 The Drive folder should remain **Restricted**. Customers do not need access to it. The Apps Script web app runs as the business owner and writes to Drive and Sheets using that account's permissions.
 
+Before sending a photo to the server, the review page resizes and compresses it in the customer's browser so normal phone-camera images stay within the hosting request-size limit.
+
 The Next.js review endpoint follows Apps Script ContentService redirects manually. If Google briefly returns a 404 for the one-time `googleusercontent.com` response URL, the endpoint retries that response URL without repeating the original POST. This avoids duplicate Sheet rows or Drive files when the Apps Script execution has already completed.
 
 ## Environment variable

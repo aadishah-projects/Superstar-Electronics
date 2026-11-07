@@ -25,6 +25,16 @@ function wait(milliseconds: number) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+function resolveRedirectUrl(location: string, endpoint: string) {
+  try {
+    const url = new URL(location, endpoint);
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 async function fetchAppsScriptResponse(endpoint: string, body: string) {
   const initialResponse = await fetch(endpoint, {
     method: "POST",
@@ -39,12 +49,18 @@ async function fetchAppsScriptResponse(endpoint: string, body: string) {
       status: initialResponse.status,
       contentType: initialResponse.headers.get("content-type") || "",
       text: await initialResponse.text(),
+      responseLostAfterRedirect: false,
     };
   }
 
   let location = initialResponse.headers.get("location");
   if (!location) {
-    return { status: initialResponse.status, contentType: "", text: "" };
+    return { status: initialResponse.status, contentType: "", text: "", responseLostAfterRedirect: false };
+  }
+
+  const firstRedirectUrl = resolveRedirectUrl(location, endpoint);
+  if (!firstRedirectUrl) {
+    return { status: initialResponse.status, contentType: "", text: "", responseLostAfterRedirect: false };
   }
 
   let lastResponse = initialResponse;
@@ -56,7 +72,8 @@ async function fetchAppsScriptResponse(endpoint: string, body: string) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (attempt > 0) await wait(attempt * 1500);
 
-    const responseUrl = new URL(location, endpoint).toString();
+    const responseUrl = resolveRedirectUrl(location, endpoint);
+    if (!responseUrl) break;
     lastResponse = await fetch(responseUrl, {
       method: "GET",
       cache: "no-store",
@@ -75,6 +92,7 @@ async function fetchAppsScriptResponse(endpoint: string, body: string) {
     status: lastResponse.status,
     contentType: lastResponse.headers.get("content-type") || "",
     text: lastText,
+    responseLostAfterRedirect: new URL(firstRedirectUrl).hostname === "script.googleusercontent.com" && lastResponse.status === 404,
   };
 }
 
@@ -127,6 +145,11 @@ export async function POST(request: Request) {
       upstreamResult = JSON.parse(upstreamText) as { ok?: boolean; error?: string };
     } catch {
       upstreamResult = { ok: false, error: "Google Apps Script returned an unexpected response." };
+    }
+
+    if (upstream.responseLostAfterRedirect) {
+      console.warn("Apps Script accepted the review, but its one-time response URL returned 404; continuing without repeating the POST.");
+      return NextResponse.json({ ok: true, responseUnconfirmed: true });
     }
 
     if (upstream.status < 200 || upstream.status >= 300 || upstreamResult.ok !== true) {

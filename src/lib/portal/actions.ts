@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import {
   countUsers,
@@ -370,6 +370,7 @@ export async function createProductAction(_: ActionState, formData: FormData): P
 
   revalidatePath("/portal/products");
   revalidatePath("/products");
+  revalidateTag("public-catalog", "max");
   redirect("/portal/products?saved=created");
 }
 
@@ -446,6 +447,7 @@ export async function updateProductAction(productId: string, _: ActionState, for
   revalidatePath("/portal/products");
   revalidatePath(`/portal/products/${productId}`);
   revalidatePath("/products");
+  revalidateTag("public-catalog", "max");
   redirect(`/portal/products/${productId}?saved=updated`);
 }
 
@@ -523,6 +525,7 @@ export async function importProductsCsvAction(_: ActionState, formData: FormData
 
   revalidatePath("/portal/products");
   revalidatePath("/products");
+  revalidateTag("public-catalog", "max");
   redirect("/portal/products?imported=success");
 }
 

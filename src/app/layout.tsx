@@ -9,8 +9,6 @@ import { buildMetadata } from "@/lib/metadata";
 import { Analytics } from "@vercel/analytics/next";
 import { getCatalogSnapshot } from "@/lib/catalog-source";
 
-export const dynamic = "force-dynamic";
-
 const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],

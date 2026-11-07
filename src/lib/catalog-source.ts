@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { catalogCategories as staticCategories, catalogProducts as staticProducts, catalogSyncedAt } from "@/data/catalog";
 import { getProductsFromSqlite } from "@/lib/portal/queries";
 import { getFirestorePublishedProducts } from "@/lib/portal/firestore-data";
@@ -66,6 +67,11 @@ export async function getCatalogSnapshot() {
     return { categories: staticCategories, products: staticProducts, syncedAt: catalogSyncedAt };
   }
 
+  return getCachedManagedCatalogSnapshot();
+}
+
+const getCachedManagedCatalogSnapshot = unstable_cache(
+  async () => {
   try {
     const products = isFirestorePortalBackend()
       ? await getFirestorePublishedProducts()
@@ -74,7 +80,10 @@ export async function getCatalogSnapshot() {
   } catch {
     return { categories: staticCategories, products: staticProducts, syncedAt: catalogSyncedAt };
   }
-}
+  },
+  ["managed-public-catalog"],
+  { revalidate: 300, tags: ["public-catalog"] },
+);
 
 export async function getPublicProductsForCategory(categoryKey: string) {
   return (await getCatalogSnapshot()).products.filter((product) => product.categoryKey === categoryKey);

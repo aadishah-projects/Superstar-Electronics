@@ -6,7 +6,7 @@ import { buildMetadata } from "@/lib/metadata";
 import { getCatalogSnapshot } from "@/lib/catalog-source";
 import { buildWhatsAppUrl } from "@/lib/urls";
 
-export const metadata: Metadata = buildMetadata({ title: "Products", description: "Browse CCTV, wireless cameras, recorders, networking gear, intercoms, and access devices from Super Star Electronics.", path: "/products", keywords: ["CCTV products Chitwan", "MRP camera price Nepal", "POE switches Nepal", "video intercom Chitwan", "biometric access control Nepal"] });
+export const metadata: Metadata = buildMetadata({ title: "CCTV Cameras & Security Products in Chitwan", description: "Browse CCTV, wireless cameras, recorders, networking gear, intercoms, and access devices from Super Star Electronics.", path: "/products", keywords: ["CCTV products Chitwan", "MRP camera price Nepal", "POE switches Nepal", "video intercom Chitwan", "biometric access control Nepal"] });
 
 export default async function ProductsPage() {
   const { categories, products, syncedAt } = await getCatalogSnapshot();

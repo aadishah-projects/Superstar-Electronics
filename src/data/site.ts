@@ -33,6 +33,7 @@ export const siteConfig: SiteConfig = {
     embedMapUrl:
       "https://www.google.com/maps?q=Ganesh%20Market%2C%20Narayangarh%2C%20Chitwan%2C%20Nepal&z=16&output=embed",
   },
+  socialProfiles: ["https://www.tiktok.com/@cctvnetworkingchitwan"],
   hours: {
     daysLabel: "Sunday - Friday",
     closedOn: "Saturday",

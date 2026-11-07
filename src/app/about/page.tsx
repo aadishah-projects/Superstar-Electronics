@@ -9,7 +9,7 @@ import { buildMetadata } from "@/lib/metadata";
 import { buildWhatsAppUrl } from "@/lib/urls";
 
 export const metadata: Metadata = buildMetadata({
-  title: "About Us",
+  title: "About Super Star Electronics | Chitwan Security Solutions",
   description:
     "Meet the people, partnerships, and practical security work behind Super Star Electronics Industries in Chitwan.",
   path: "/about",

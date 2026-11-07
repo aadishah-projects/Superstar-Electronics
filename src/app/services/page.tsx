@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
+import { JsonLd } from "@/components/json-ld";
 import { SectionHeading } from "@/components/section-heading";
 import { ServiceCard } from "@/components/service-card";
 import { solutionPackages, services } from "@/data/site";
 import { buildMetadata } from "@/lib/metadata";
 import { buildWhatsAppUrl } from "@/lib/urls";
+import { getServiceListSchema } from "@/lib/structured-data";
 
 export const metadata: Metadata = buildMetadata({
-  title: "Services",
+  title: "CCTV Installation & Security Services in Chitwan",
   description:
     "Explore CCTV installation, repair, maintenance, networking setup, wholesale supply, and technical consultation from Super Star Electronics Industries.",
   path: "/services",
@@ -16,7 +18,9 @@ export const metadata: Metadata = buildMetadata({
 
 export default function ServicesPage() {
   return (
-    <section className="page-section pt-10 sm:pt-14">
+    <>
+      <JsonLd data={getServiceListSchema()} />
+      <section className="page-section pt-10 sm:pt-14">
       <Container>
         <div>
           <span className="section-kicker">Services</span>
@@ -102,6 +106,7 @@ export default function ServicesPage() {
           </div>
         </div>
       </Container>
-    </section>
+      </section>
+    </>
   );
 }

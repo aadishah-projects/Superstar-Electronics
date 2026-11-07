@@ -9,7 +9,7 @@ import { ServiceCard } from "@/components/service-card";
 import { customerScenarios, offerHighlights, services, siteConfig, whyChooseUs } from "@/data/site";
 import { getCatalogSnapshot } from "@/lib/catalog-source";
 import { buildWhatsAppUrl, toTelHref } from "@/lib/urls";
-import { getOrganizationSchema, getWebSiteSchema } from "@/lib/structured-data";
+import { getLocalBusinessSchema, getOrganizationSchema, getWebSiteSchema } from "@/lib/structured-data";
 
 const categoryHighlights: Record<string, string> = {
   "cctv-cameras": "Indoor & outdoor coverage",
@@ -55,10 +55,12 @@ export default async function HomePage() {
   const featuredProducts = catalog.products
     .filter((product) => product.categoryKey === "wireless-cameras")
     .slice(0, 3);
+  const localBusinessSchema = await getLocalBusinessSchema(catalog.products);
   return (
     <>
       <JsonLd data={getOrganizationSchema()} />
       <JsonLd data={getWebSiteSchema()} />
+      <JsonLd data={localBusinessSchema} />
 
       <section className="pb-6 pt-0">
         <Container fullBleed className="overflow-hidden border-y border-[#dce6f2] bg-white shadow-[0_12px_35px_rgba(25,65,115,0.07)]">

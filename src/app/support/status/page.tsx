@@ -7,11 +7,17 @@ import { hashToken } from "@/lib/portal/db";
 import { getPublicSupportTicket } from "@/lib/portal/queries";
 import { buildMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = buildMetadata({
-  title: "Check Support Ticket Status",
-  description: "Securely check the status of a Super Star Electronics technical support request.",
-  path: "/support/status",
-});
+export const metadata: Metadata = {
+  ...buildMetadata({
+    title: "Check Support Ticket Status",
+    description: "Securely check the status of a Super Star Electronics technical support request.",
+    path: "/support/status",
+  }),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function SupportStatusPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const params = await searchParams;

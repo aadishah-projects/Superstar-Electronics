@@ -9,7 +9,7 @@ import { getLocalBusinessSchema } from "@/lib/structured-data";
 import { buildWhatsAppUrl, toTelHref } from "@/lib/urls";
 
 export const metadata: Metadata = buildMetadata({
-  title: "Contact",
+  title: "Contact CCTV & Security Experts in Chitwan",
   description:
     "Contact Super Star Electronics Industries for CCTV installation, product inquiries, quotations, and technical support in Chitwan and across Nepal.",
   path: "/contact",

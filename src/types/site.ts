@@ -116,6 +116,7 @@ export interface SiteConfig {
     mapsUrl: string;
     embedMapUrl: string;
   };
+  socialProfiles: string[];
   hours: {
     daysLabel: string;
     closedOn: string;

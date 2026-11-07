@@ -100,18 +100,53 @@ async function copyToClipboard(value: string) {
   helper.remove();
 }
 
-function fileToBase64(file: File) {
+function blobToBase64(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : "";
       const base64 = result.split(",")[1];
       if (base64) resolve(base64);
-      else reject(new Error("We could not read the selected photo."));
+      else reject(new Error("We could not prepare the selected photo."));
     };
-    reader.onerror = () => reject(new Error("We could not read the selected photo."));
-    reader.readAsDataURL(file);
+    reader.onerror = () => reject(new Error("We could not prepare the selected photo."));
+    reader.readAsDataURL(blob);
   });
+}
+
+async function fileToBase64(file: File) {
+  const sourceDataUrl = await blobToBase64(file).then((base64) => `data:${file.type};base64,${base64}`);
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new window.Image();
+    element.onload = () => resolve(element);
+    element.onerror = () => reject(new Error("We could not prepare the selected photo."));
+    element.src = sourceDataUrl;
+  });
+
+  const largestSide = Math.max(image.naturalWidth, image.naturalHeight);
+  if (!largestSide) throw new Error("We could not prepare the selected photo.");
+
+  const scale = Math.min(1, 1600 / largestSide);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("We could not prepare the selected photo.");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const compressedBlob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("We could not prepare the selected photo."));
+    }, "image/jpeg", 0.78);
+  });
+
+  return blobToBase64(compressedBlob);
+}
+
+function compressedPhotoName(name: string) {
+  const baseName = name.replace(/\.[^/.]+$/, "") || "review-photo";
+  return `${baseName}.jpg`;
 }
 
 function StarIcon({ filled }: { filled: boolean }) {
@@ -223,8 +258,8 @@ export function ReviewFlow() {
       if (!saved) {
         const photo = photoFile
           ? {
-              name: photoFile.name,
-              mimeType: photoFile.type,
+              name: compressedPhotoName(photoFile.name),
+              mimeType: "image/jpeg",
               base64: await fileToBase64(photoFile),
             }
           : null;
@@ -233,7 +268,13 @@ export function ReviewFlow() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ rating, templateId: selectedOptionIds.join(","), reviewText, photo }),
         });
-        const result = (await response.json()) as { ok?: boolean; error?: string };
+        const responseText = await response.text();
+        let result: { ok?: boolean; error?: string } = {};
+        try {
+          result = JSON.parse(responseText) as { ok?: boolean; error?: string };
+        } catch {
+          if (response.status === 413) throw new Error("This photo is too large. Please choose another photo.");
+        }
         if (!response.ok || result.ok !== true) {
           throw new Error(result.error || "We could not save your feedback.");
         }
@@ -369,7 +410,7 @@ export function ReviewFlow() {
                 <div>
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#71829a]">Optional</p>
                   <h2 className="mt-1 text-lg font-semibold text-ink sm:text-xl">Add a photo of your setup</h2>
-                  <p className="mt-1.5 text-sm leading-6 copy-muted">We’ll also save this photo in our private review folder. We’d really appreciate it if you attach the same photo again on Google so your public review includes your setup.</p>
+                  <p className="mt-1.5 text-sm leading-6 copy-muted">We’ll also save this photo in our private review folder. We automatically make it upload-friendly. We’d really appreciate it if you attach the same photo again on Google so your public review includes your setup.</p>
                 </div>
               </div>
 

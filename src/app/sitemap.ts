@@ -11,6 +11,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/about", changeFrequency: "monthly" as const, priority: 0.7 },
     { path: "/contact", changeFrequency: "monthly" as const, priority: 0.8 },
     { path: "/support", changeFrequency: "monthly" as const, priority: 0.5 },
+    { path: "/cctv-installation-chitwan", changeFrequency: "monthly" as const, priority: 0.85 },
+    { path: "/cctv-repair-maintenance-chitwan", changeFrequency: "monthly" as const, priority: 0.75 },
+    { path: "/security-systems-bharatpur", changeFrequency: "monthly" as const, priority: 0.85 },
   ];
 
   const catalogRoutes = products.map((product) => ({

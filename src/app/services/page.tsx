@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Container } from "@/components/container";
 import { JsonLd } from "@/components/json-ld";
 import { SectionHeading } from "@/components/section-heading";
 import { ServiceCard } from "@/components/service-card";
+import { localServicePages } from "@/data/local-service-pages";
 import { solutionPackages, services } from "@/data/site";
 import { buildMetadata } from "@/lib/metadata";
 import { buildWhatsAppUrl } from "@/lib/urls";
@@ -39,6 +41,24 @@ export default function ServicesPage() {
           {services.map((service) => (
             <ServiceCard key={service.slug} service={service} />
           ))}
+        </div>
+
+        <div className="mt-14">
+          <SectionHeading
+            eyebrow="Local service guides"
+            title="Start with the service that matches your question."
+            description="These guides explain what we help with, who it is for, and what to expect before you contact the team."
+          />
+          <div className="mt-7 grid gap-4 md:grid-cols-3">
+            {localServicePages.map((page) => (
+              <Link key={page.path} href={page.path} className="surface-card group p-6 transition hover:-translate-y-0.5 hover:border-brand-blue">
+                <p className="text-[0.66rem] font-bold uppercase tracking-[0.16em] text-brand-blue">{page.eyebrow}</p>
+                <h3 className="mt-3 font-heading text-xl tracking-tight text-ink group-hover:text-brand-blue">{page.headline}</h3>
+                <p className="mt-3 text-sm leading-6 copy-muted">{page.summary}</p>
+                <span className="mt-5 inline-flex text-sm font-semibold text-brand-blue">Read the guide →</span>
+              </Link>
+            ))}
+          </div>
         </div>
 
         <div className="mt-16">

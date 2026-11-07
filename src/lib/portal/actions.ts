@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { redirect } from "next/navigation";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   countUsers,
@@ -180,6 +180,10 @@ function optionalText(formData: FormData, key: string) {
   return value || null;
 }
 
+function productMutationsDisabled(): boolean {
+  return true;
+}
+
 function safeError(error: unknown, fallback: string) {
   if (error instanceof z.ZodError) {
     return error.issues[0]?.message ?? fallback;
@@ -314,6 +318,7 @@ async function saveProductImage(formData: FormData) {
 
 export async function createProductAction(_: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requirePortalUser(["owner", "manager"]);
+  if (productMutationsDisabled()) return { error: "The product catalogue is code-managed. Update src/data/catalog.ts and deploy the website." };
 
   try {
     const parsed = parseProductForm(formData);
@@ -370,12 +375,12 @@ export async function createProductAction(_: ActionState, formData: FormData): P
 
   revalidatePath("/portal/products");
   revalidatePath("/products");
-  revalidateTag("public-catalog", "max");
   redirect("/portal/products?saved=created");
 }
 
 export async function updateProductAction(productId: string, _: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requirePortalUser(["owner", "manager"]);
+  if (productMutationsDisabled()) return { error: "The product catalogue is code-managed. Update src/data/catalog.ts and deploy the website." };
 
   try {
     if (isFirestorePortalBackend()) {
@@ -447,7 +452,6 @@ export async function updateProductAction(productId: string, _: ActionState, for
   revalidatePath("/portal/products");
   revalidatePath(`/portal/products/${productId}`);
   revalidatePath("/products");
-  revalidateTag("public-catalog", "max");
   redirect(`/portal/products/${productId}?saved=updated`);
 }
 
@@ -496,6 +500,7 @@ function normalizeImportRow(raw: ProductImportRow, rowNumber: number) {
 
 export async function importProductsCsvAction(_: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requirePortalUser(["owner", "manager"]);
+  if (productMutationsDisabled()) return { error: "Product import is disabled. Update src/data/catalog.ts and deploy the website." };
   if (text(formData, "confirmImport") !== "on") return { error: "Confirm the validated preview before applying the import." };
 
   try {
@@ -525,7 +530,6 @@ export async function importProductsCsvAction(_: ActionState, formData: FormData
 
   revalidatePath("/portal/products");
   revalidatePath("/products");
-  revalidateTag("public-catalog", "max");
   redirect("/portal/products?imported=success");
 }
 

@@ -23,7 +23,6 @@ const navItems: Array<{ href: string; label: string; icon: PortalIconName; roles
   { href: "/portal/tickets", label: "Service Requests", icon: "headphones", roles: ["owner", "manager", "staff", "technician"], section: "workspace" },
   { href: "/portal/schedule", label: "Schedule", icon: "calendar", roles: ["owner", "manager", "staff", "technician"], section: "workspace" },
   { href: "/portal/quotations", label: "Quotations", icon: "file", roles: ["owner", "manager", "staff"], section: "sales" },
-  { href: "/portal/products", label: "Products", icon: "package", roles: ["owner", "manager"], section: "sales" },
   { href: "/portal/points", label: "SS Points", icon: "gift", roles: ["owner", "manager", "staff", "technician"], section: "rewards" },
   { href: "/portal/rewards", label: "Rewards", icon: "gift", roles: ["owner", "manager", "staff", "technician"], section: "rewards" },
   { href: "/portal/redemptions", label: "Redemptions", icon: "wallet", roles: ["owner", "manager", "staff", "technician"], section: "rewards" },

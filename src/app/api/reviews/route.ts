@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hasR2Config, putPrivateR2Object } from "@/lib/integrations/r2";
 
 export const runtime = "nodejs";
 
@@ -131,10 +132,35 @@ export async function POST(request: Request) {
       photo = { name: photoName, mimeType, base64 };
     }
 
+    let r2Key = "";
+    if (photo) {
+      if (!hasR2Config()) {
+        return NextResponse.json({ ok: false, error: "Photo storage is not configured." }, { status: 503 });
+      }
+
+      r2Key = `review-photos/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.jpg`;
+      try {
+        await putPrivateR2Object({
+          key: r2Key,
+          body: Buffer.from(photo.base64, "base64"),
+          contentType: "image/jpeg",
+        });
+      } catch (error) {
+        console.error("Review photo upload failed", error instanceof Error ? error.message : "Unknown R2 upload error");
+        return NextResponse.json({ ok: false, error: "We could not save the photo. Please try again." }, { status: 502 });
+      }
+    }
+
+    // Apps Script keeps the review row, while the photo itself is now private in R2.
+    // Sending an empty base64 value prevents the old Drive upload branch from running.
+    const appsScriptPhoto = r2Key
+      ? { name: r2Key, mimeType: "image/jpeg", base64: "", r2Key }
+      : null;
+
     const upstream = await fetchAppsScriptResponse(
       endpoint,
       new URLSearchParams({
-        payload: JSON.stringify({ rating, reviewText, templateId, photo }),
+        payload: JSON.stringify({ rating, reviewText, templateId, photo: appsScriptPhoto }),
       }).toString(),
     );
 

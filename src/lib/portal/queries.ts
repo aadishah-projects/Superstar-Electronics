@@ -1140,6 +1140,22 @@ export async function getNotifications(userId: string, limit = 12) {
   return isFirestorePortalBackend() ? firestoreData.getFirestoreNotifications(userId, limit) : getNotificationsFromSqlite(userId, limit);
 }
 
+export async function markPortalNotificationRead(userId: string, notificationId: string) {
+  if (isFirestorePortalBackend()) {
+    await firestoreData.markFirestoreNotificationRead(notificationId, userId);
+    return;
+  }
+  getPortalDatabase().prepare("UPDATE notifications SET read_at = ? WHERE id = ? AND user_id = ?").run(new Date().toISOString(), notificationId, userId);
+}
+
+export async function markAllPortalNotificationsRead(userId: string) {
+  if (isFirestorePortalBackend()) {
+    await firestoreData.markAllFirestoreNotificationsRead(userId);
+    return;
+  }
+  getPortalDatabase().prepare("UPDATE notifications SET read_at = ? WHERE user_id = ? AND read_at IS NULL").run(new Date().toISOString(), userId);
+}
+
 export async function getActiveUsers() {
   return isFirestorePortalBackend() ? firestoreData.getFirestoreActiveUsers() : getActiveUsersFromSqlite();
 }

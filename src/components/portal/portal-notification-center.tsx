@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { PortalIcon } from "@/components/portal/portal-ui";
 import type { NotificationRecord } from "@/lib/portal/types";
 
@@ -24,6 +25,7 @@ export function PortalNotificationCenter({ initialNotifications }: { initialNoti
   const [open, setOpen] = useState(false);
   const seenIds = useRef(new Set(initialNotifications.map((notification) => notification.id)));
   const centerRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (!open) return;
@@ -77,6 +79,25 @@ export function PortalNotificationCenter({ initialNotifications }: { initialNoti
 
   const unreadCount = useMemo(() => notifications.filter((notification) => !notification.readAt).length, [notifications]);
 
+  async function markRead(notificationId?: string, all = false) {
+    try {
+      const response = await fetch("/api/portal/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(all ? { all: true } : { notificationId }), cache: "no-store" });
+      if (!response.ok) return false;
+      const payload = await response.json() as { notifications?: NotificationRecord[] };
+      if (Array.isArray(payload.notifications)) setNotifications(payload.notifications);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function openNotification(event: ReactMouseEvent<HTMLAnchorElement>, notification: NotificationRecord) {
+    event.preventDefault();
+    await markRead(notification.id);
+    setOpen(false);
+    router.push(notificationHref(notification));
+  }
+
   return (
     <>
       <div ref={centerRef} className="relative">
@@ -88,9 +109,9 @@ export function PortalNotificationCenter({ initialNotifications }: { initialNoti
           <div role="dialog" aria-label="Notification inbox" className="fixed inset-x-3 top-[5.25rem] z-50 max-h-[calc(100dvh-6.5rem)] overflow-hidden rounded-2xl border border-[#dce6f2] bg-white shadow-[0_18px_48px_rgba(17,39,75,0.16)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-[min(22rem,calc(100vw-2rem))] sm:max-h-none">
             <div className="flex items-start justify-between gap-3 border-b border-[#edf1f5] px-4 py-3"><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-[#1463d7]">Inbox</p><p className="mt-1 text-sm font-semibold text-[#27364a]">Recent updates</p><p className="mt-1 text-[0.68rem] text-[#8b98aa]">Tap an update to open its record.</p></div><div className="flex items-center gap-2"><span className="text-xs text-[#8b98aa]">{unreadCount} unread</span><button type="button" onClick={() => setOpen(false)} aria-label="Close notifications" className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[#8b98aa] hover:bg-[#f4f7fb] hover:text-[#27364a]"><PortalIcon name="close" className="h-4 w-4" /></button></div></div>
             <div className="max-h-[calc(100dvh-13rem)] overflow-y-auto p-2 sm:max-h-80">
-              {notifications.length ? notifications.slice(0, 6).map((notification) => <Link key={notification.id} href={notificationHref(notification)} onClick={() => setOpen(false)} className={`block rounded-xl px-3 py-3 transition hover:bg-[#f6f9ff] ${notification.readAt ? "" : "bg-[#f6f9ff]"}`}><div className="flex items-start gap-2"><span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${notification.readAt ? "bg-[#cbd6e3]" : "bg-[#1463d7]"}`} /><div className="min-w-0"><p className="text-xs font-semibold text-[#34465c]">{notification.title}</p><p className="mt-1 line-clamp-2 text-[0.68rem] leading-5 text-[#7d899a]">{notification.message}</p><p className="mt-1 text-[0.6rem] text-[#a0aabd]">{formatTime(notification.createdAt)}</p></div></div></Link>) : <p className="px-3 py-8 text-center text-xs text-[#8b98aa]">No notifications yet.</p>}
+              {notifications.length ? notifications.slice(0, 6).map((notification) => <div key={notification.id} className={`flex items-start gap-2 rounded-xl px-3 py-3 transition hover:bg-[#f6f9ff] ${notification.readAt ? "" : "bg-[#f6f9ff]"}`}><Link href={notificationHref(notification)} onClick={(event) => void openNotification(event, notification)} className="min-w-0 flex-1"><div className="flex items-start gap-2"><span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${notification.readAt ? "bg-[#cbd6e3]" : "bg-[#1463d7]"}`} /><div className="min-w-0"><p className="text-xs font-semibold text-[#34465c]">{notification.title}</p><p className="mt-1 line-clamp-2 text-[0.68rem] leading-5 text-[#7d899a]">{notification.message}</p><p className="mt-1 text-[0.6rem] text-[#a0aabd]">{formatTime(notification.createdAt)}</p></div></div></Link>{!notification.readAt ? <button type="button" onClick={() => void markRead(notification.id)} className="shrink-0 rounded-lg px-2 py-1 text-[0.6rem] font-semibold text-[#1463d7] hover:bg-[#e9f1ff]">Read</button> : null}</div>) : <p className="px-3 py-8 text-center text-xs text-[#8b98aa]">No notifications yet.</p>}
             </div>
-            <Link href="/portal/dashboard#notifications" onClick={() => setOpen(false)} className="block border-t border-[#edf1f5] px-4 py-3 text-center text-xs font-semibold text-[#1463d7] hover:bg-[#f6f9ff]">Open full inbox</Link>
+            <div className="flex items-center justify-between gap-3 border-t border-[#edf1f5] px-4 py-3"><Link href="/portal/dashboard#notifications" onClick={() => setOpen(false)} className="text-xs font-semibold text-[#1463d7] hover:underline">Open full inbox</Link>{unreadCount ? <button type="button" onClick={() => void markRead(undefined, true)} className="text-xs font-semibold text-[#1463d7] hover:underline">Mark all read</button> : <span className="text-xs text-[#8b98aa]">All caught up</span>}</div>
           </div>
         ) : null}
       </div>

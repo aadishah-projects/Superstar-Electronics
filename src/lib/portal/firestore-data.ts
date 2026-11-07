@@ -493,6 +493,12 @@ export async function markFirestoreNotificationRead(id: string, userId: string) 
   if (current?.userId === userId) await write(portalCollections.notifications, id, { readAt: timestamp() }, true);
 }
 
+export async function markAllFirestoreNotificationsRead(userId: string) {
+  const notifications = (await all<StoredRecord>(portalCollections.notifications)).filter((notification) => notification.userId === userId && !notification.readAt);
+  const readAt = timestamp();
+  await Promise.all(notifications.map((notification) => write(portalCollections.notifications, text(notification.id), { readAt }, true)));
+}
+
 export async function recordFirestoreActivity(input: { entityType: string; entityId: string; action: string; actorId: string; details?: unknown }) {
   const actor = (await listFirestorePortalUsers()).find((user) => user.id === input.actorId);
   await write(portalCollections.activities, crypto.randomUUID(), { entityType: input.entityType, entityId: input.entityId, action: input.action, actorId: input.actorId, actorName: actor?.name ?? "", details: input.details ? JSON.stringify(input.details) : null, createdAt: timestamp() });

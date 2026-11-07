@@ -5,7 +5,6 @@ import { LoginForm } from "@/components/portal/portal-forms";
 import { FirebaseLoginForm } from "@/components/portal/firebase-login-form";
 import { getCurrentPortalUser } from "@/lib/portal/auth";
 import { countUsers } from "@/lib/portal/db";
-import { countFirestorePortalUsers } from "@/lib/portal/firestore-users";
 import { getPortalAuthBackend } from "@/lib/portal/backend";
 
 export const runtime = "nodejs";
@@ -16,14 +15,10 @@ export default async function PortalLoginPage() {
   }
 
   const authBackend = getPortalAuthBackend();
-  let hasUsers = false;
-  try {
-    // If Firestore is temporarily quota-limited, still render the Firebase
-    // sign-in form so an existing staff member receives a useful login path.
-    hasUsers = authBackend === "firestore" ? (await countFirestorePortalUsers()) > 0 : countUsers() > 0;
-  } catch {
-    hasUsers = authBackend === "firestore";
-  }
+  // Firestore-backed sign-in does not need a user-count read before rendering.
+  // Besides adding latency, that read can fail when Firestore is quota-limited.
+  // Firebase authentication and the server session still validate the account.
+  const hasUsers = authBackend === "firestore" ? true : countUsers() > 0;
 
   return (
     <PortalAuthShell eyebrow="Private workspace" title="Sign in to the business portal" description="For authorized owners, website managers, staff, and technicians. Customers can submit support requests from the public website.">

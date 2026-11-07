@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 :root {
   --background: #ffffff;
@@ -178,6 +179,38 @@
     @apply rounded-lg;
     box-shadow: none;
   }
+
+  .portal-map-picker .leaflet-container {
+    min-height: 17rem;
+    width: 100%;
+    border-radius: 0.9rem;
+    z-index: 0;
+  }
+
+  .portal-map-picker .leaflet-control-attribution {
+    font-size: 0.58rem;
+  }
+
+  .portal-map-picker .leaflet-bar a {
+    color: var(--brand-blue);
+  }
+
+  .portal-map-marker {
+    display: grid;
+    place-items: center;
+    border: 3px solid white;
+    border-radius: 999px;
+    background: var(--brand-red);
+    box-shadow: 0 3px 12px rgba(17, 39, 75, 0.3);
+  }
+
+  .portal-map-marker span {
+    display: block;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: white;
+  }
 }
 
 @keyframes fade-up {
@@ -225,5 +258,23 @@
   .portal-notification-pulse,
   .portal-notification-toast {
     animation: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .portal-page {
+    overflow-x: hidden;
+  }
+
+  .portal-page main {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 1.25rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .portal-page .surface-card,
+  .portal-page .surface-card-strong {
+    border-radius: 0.9rem;
   }
 }

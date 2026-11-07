@@ -118,14 +118,14 @@ export function PortalShell({ user, initialNotifications, children }: PortalShel
             </div>
           </header>
 
-          <div className="border-b border-[#e6ebf2] bg-white px-4 py-3 lg:hidden">
+          <div className="border-b border-[#e6ebf2] bg-white px-3 py-2.5 lg:hidden">
             <details className="group">
               <summary className="flex cursor-pointer list-none items-center justify-between text-[0.76rem] font-semibold text-[#27364a]"><span className="flex items-center gap-2"><PortalIcon name="menu" className="h-4 w-4 text-[#1463d7]" />Portal navigation</span><PortalIcon name="chevron" className="h-4 w-4 text-[#8792a2] transition group-open:rotate-180" /></summary>
-              <div className="mt-3 border-t border-[#edf0f5] pt-3"><PortalNav user={user} /></div>
+              <div className="mt-3 border-t border-[#edf0f5] pt-3"><PortalNav user={user} /><div className="mt-3 flex items-center justify-between gap-3 border-t border-[#edf0f5] pt-3"><div className="flex min-w-0 items-center gap-2"><span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#dbeafe] text-[0.68rem] font-bold text-[#1463d7]">{initials(user.name)}</span><div className="min-w-0"><p className="truncate text-xs font-semibold text-[#27364a]">{user.name}</p><p className="truncate text-[0.65rem] text-[#8b98aa]">{portalRoleLabels[user.role]}</p></div></div><form action={logoutAction}><button type="submit" className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#f1d4d1] bg-[#fff7f6] px-3 text-xs font-semibold text-[#b74638] transition hover:bg-[#fff0ec]"><PortalIcon name="logout" className="h-4 w-4" />Sign out</button></form></div></div>
             </details>
           </div>
 
-          <main className="min-w-0 px-5 py-7 sm:px-8 lg:px-10 lg:py-9 xl:px-12">{children}</main>
+          <main className="min-w-0 px-3 py-5 sm:px-8 sm:py-7 lg:px-10 lg:py-9 xl:px-12">{children}</main>
         </div>
       </div>
     </div>

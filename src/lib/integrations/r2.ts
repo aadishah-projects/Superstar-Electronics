@@ -103,6 +103,16 @@ export async function putPrivateReviewR2Object(input: {
   );
 }
 
+export async function deletePrivateReviewR2Object(key: string) {
+  const config = getReviewR2Config();
+  await getReviewR2Client().send(
+    new DeleteObjectCommand({
+      Bucket: config.bucketName,
+      Key: key,
+    }),
+  );
+}
+
 export function getR2BucketName() {
   return getR2Config().bucketName;
 }

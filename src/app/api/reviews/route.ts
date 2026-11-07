@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { hasReviewR2Config, putPrivateReviewR2Object } from "@/lib/integrations/r2";
+import { saveCustomerReview } from "@/lib/integrations/customer-reviews";
+import { deletePrivateReviewR2Object, hasReviewR2Config, putPrivateReviewR2Object } from "@/lib/integrations/r2";
 
 export const runtime = "nodejs";
 
@@ -20,90 +21,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-const redirectStatuses = new Set([301, 302, 303, 307, 308]);
-
-function wait(milliseconds: number) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-function resolveRedirectUrl(location: string, endpoint: string) {
-  try {
-    const url = new URL(location, endpoint);
-    if (!['http:', 'https:'].includes(url.protocol)) return null;
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
-async function fetchAppsScriptResponse(endpoint: string, body: string) {
-  const initialResponse = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-    body,
-    cache: "no-store",
-    redirect: "manual",
-  });
-
-  if (!redirectStatuses.has(initialResponse.status)) {
-    return {
-      status: initialResponse.status,
-      contentType: initialResponse.headers.get("content-type") || "",
-      text: await initialResponse.text(),
-      responseLostAfterRedirect: false,
-    };
-  }
-
-  let location = initialResponse.headers.get("location");
-  if (!location) {
-    return { status: initialResponse.status, contentType: "", text: "", responseLostAfterRedirect: false };
-  }
-
-  const firstRedirectUrl = resolveRedirectUrl(location, endpoint);
-  if (!firstRedirectUrl) {
-    return { status: initialResponse.status, contentType: "", text: "", responseLostAfterRedirect: false };
-  }
-
-  let lastResponse = initialResponse;
-  let lastText = "";
-
-  // Apps Script ContentService can briefly return 404 while its one-time
-  // googleusercontent.com response URL is being made available. Retry the
-  // response URL only; never repeat the POST, which could create duplicates.
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    if (attempt > 0) await wait(attempt * 1500);
-
-    const responseUrl = resolveRedirectUrl(location, endpoint);
-    if (!responseUrl) break;
-    lastResponse = await fetch(responseUrl, {
-      method: "GET",
-      cache: "no-store",
-      redirect: "manual",
-    });
-    lastText = await lastResponse.text();
-
-    if (!redirectStatuses.has(lastResponse.status)) break;
-
-    const nextLocation = lastResponse.headers.get("location");
-    if (!nextLocation) break;
-    location = nextLocation;
-  }
-
-  return {
-    status: lastResponse.status,
-    contentType: lastResponse.headers.get("content-type") || "",
-    text: lastText,
-    responseLostAfterRedirect: new URL(firstRedirectUrl).hostname === "script.googleusercontent.com" && lastResponse.status === 404,
-  };
-}
-
 export async function POST(request: Request) {
-  const endpoint = process.env.REVIEW_UPLOAD_URL;
-
-  if (!endpoint) {
-    return NextResponse.json({ ok: false, error: "Review upload is not configured." }, { status: 503 });
-  }
-
   try {
     const body = (await request.json()) as ReviewPayload;
     const rating = Number(body.rating);
@@ -132,73 +50,45 @@ export async function POST(request: Request) {
       photo = { name: photoName, mimeType, base64 };
     }
 
-    let r2Key = "";
+    let photoKey: string | null = null;
     if (photo) {
       if (!hasReviewR2Config()) {
         return NextResponse.json({ ok: false, error: "Photo storage is not configured." }, { status: 503 });
       }
 
-      r2Key = `review-photos/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.jpg`;
-      try {
-        await putPrivateReviewR2Object({
-          key: r2Key,
-          body: Buffer.from(photo.base64, "base64"),
-          contentType: "image/jpeg",
-        });
-      } catch (error) {
-        console.error("Review photo upload failed", error instanceof Error ? error.message : "Unknown R2 upload error");
-        return NextResponse.json({ ok: false, error: "We could not save the photo. Please try again." }, { status: 502 });
-      }
+      photoKey = `review-photos/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.jpg`;
+      await putPrivateReviewR2Object({
+        key: photoKey,
+        body: Buffer.from(photo.base64, "base64"),
+        contentType: "image/jpeg",
+      });
     }
-
-    // Apps Script keeps the review row, while the photo itself is now private in R2.
-    // Sending an empty base64 value prevents the old Drive upload branch from running.
-    const appsScriptPhoto = r2Key
-      ? { name: r2Key, mimeType: "image/jpeg", base64: "", r2Key }
-      : null;
-
-    const upstream = await fetchAppsScriptResponse(
-      endpoint,
-      new URLSearchParams({
-        payload: JSON.stringify({ rating, reviewText, templateId, photo: appsScriptPhoto }),
-      }).toString(),
-    );
-
-    const upstreamText = upstream.text;
-    let upstreamResult: { ok?: boolean; error?: string } = {};
 
     try {
-      upstreamResult = JSON.parse(upstreamText) as { ok?: boolean; error?: string };
-    } catch {
-      upstreamResult = { ok: false, error: "Google Apps Script returned an unexpected response." };
-    }
-
-    const responseWasLostAfterAppsScriptRun = upstream.status === 404 && upstream.contentType.includes("text/html");
-    if (upstream.responseLostAfterRedirect || responseWasLostAfterAppsScriptRun) {
-      console.error("Apps Script ran but did not return a save confirmation.");
-      return NextResponse.json(
-        { ok: false, error: "Google completed the request but did not confirm that the feedback was saved. Please try again after checking the storage settings." },
-        { status: 502 },
-      );
-    }
-
-    if (upstream.status < 200 || upstream.status >= 300 || upstreamResult.ok !== true) {
-      console.error("Review upload failed", {
-        status: upstream.status,
-        contentType: upstream.contentType,
-        error: upstreamResult.error || "Google Apps Script returned an unsuccessful response.",
+      const reviewId = await saveCustomerReview({
+        rating,
+        reviewText,
+        templateId,
+        photoName: photo?.name ?? null,
+        photoKey,
+        photoMimeType: photo?.mimeType ?? null,
       });
-      return NextResponse.json(
-        { ok: false, error: upstreamResult.error || `Google Apps Script returned HTTP ${upstream.status}.` },
-        { status: 502 },
-      );
-    }
 
-    return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, reviewId });
+    } catch (error) {
+      if (photoKey) {
+        try {
+          await deletePrivateReviewR2Object(photoKey);
+        } catch (cleanupError) {
+          console.error("Review photo cleanup failed", cleanupError instanceof Error ? cleanupError.message : "Unknown R2 cleanup error");
+        }
+      }
+      throw error;
+    }
   } catch (error) {
-    console.error("Review upload request failed", error instanceof Error ? error.message : "Unknown review upload error");
+    console.error("Review save failed", error instanceof Error ? error.message : "Unknown review save error");
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "We could not save your feedback." },
+      { ok: false, error: "We could not save your feedback. Please try again." },
       { status: 500 },
     );
   }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import { FloatingContactActions } from "@/components/floating-contact-actions";
+import { ContactEventTracker } from "@/components/contact-event-tracker";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { buildMetadata } from "@/lib/metadata";
@@ -50,6 +51,7 @@ export default async function RootLayout({
           <SiteFooter />
           <FloatingContactActions />
         </div>
+        <ContactEventTracker />
         <Analytics />
       </body>
     </html>

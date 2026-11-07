@@ -11,7 +11,7 @@ https://superstarelectronics.com.np/review
 1. The customer selects a star rating.
 2. They choose up to three short phrases that match their experience, such as `Good service`, `Good timing`, or `Helpful team`.
 3. The page combines those choices into a review draft.
-4. The customer can add a setup photo. With consent, the photo is saved to the private Drive folder and the customer is asked to attach the same photo again on Google.
+4. The customer can add a setup photo. With consent, the photo is saved to the private R2 bucket and the customer is asked to attach the same photo again on Google.
 5. The page saves the rating, review text, and photo reference to the review backend, copies the review text, and opens the direct Google review page.
 6. The customer pastes the copied text, attaches the photo, and submits the review on Google. Google submission remains a customer action.
 
@@ -22,16 +22,16 @@ The page supports general templates only. No service-specific query links are re
 ```text
 Review page
   -> POST /api/reviews
+  -> Private Cloudflare R2: uploaded customer photo
   -> Google Apps Script web app
-     -> Google Sheet: rating, review text, photo name, Drive file ID
-     -> Google Drive: uploaded customer photo
+     -> Google Sheet: rating, review text, photo name/R2 object key
 ```
 
-The Drive folder should remain **Restricted**. Customers do not need access to it. The Apps Script web app runs as the business owner and writes to Drive and Sheets using that account's permissions.
+The R2 bucket should remain private. Customers do not need access to it. The server uploads the compressed photo using the existing R2 credentials, while Apps Script records the review row and R2 object key in the Sheet.
 
 Before sending a photo to the server, the review page resizes and compresses it in the customer's browser so normal phone-camera images stay within the hosting request-size limit.
 
-The Next.js review endpoint follows Apps Script ContentService redirects manually. If Google briefly returns a 404 for the one-time `googleusercontent.com` response URL, the endpoint retries that response URL without repeating the original POST. This avoids duplicate Sheet rows or Drive files when the Apps Script execution has already completed.
+The Next.js review endpoint follows Apps Script ContentService redirects manually. If Google briefly returns a 404 for the one-time `googleusercontent.com` response URL, the endpoint retries that response URL without repeating the original POST. This avoids duplicate Sheet rows when the Apps Script execution has already completed.
 
 ## Environment variable
 
@@ -55,17 +55,18 @@ The website sends a URL-encoded `payload` field containing JSON with this shape:
   "templateId": "good-service,good-timing",
   "reviewText": "We had good service and good timing with Super Star Electronics. The team was helpful, professional, and easy to work with.",
   "photo": {
-    "name": "setup.jpg",
+    "name": "review-photos/2026-11-07/example.jpg",
     "mimeType": "image/jpeg",
-    "base64": "..."
+    "base64": "",
+    "r2Key": "review-photos/2026-11-07/example.jpg"
   }
 }
 ```
 
-The Apps Script should validate the rating and image type/size, create the Drive file from the decoded image blob, and append the submission to the `Reviews` sheet.
+The Apps Script should validate the rating and append the submission to the `Reviews` sheet. The empty `photo.base64` deliberately skips the old Drive upload branch; `photo.name` records the private R2 object key.
 
 ## Testing
 
-Use `/review` for the public flow. A real test submission will create a row in the Sheet and a file in Drive, so do not use fake submissions unless you intend to remove them afterward.
+Use `/review` for the public flow. A real test submission will create a row in the Sheet and an object in R2, so do not use fake submissions unless you intend to remove them afterward.
 
 Before changing the Apps Script contract, update both the Apps Script project and `src/app/api/reviews/route.ts` together.

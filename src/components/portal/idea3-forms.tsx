@@ -22,6 +22,7 @@ import {
   type ActionState,
 } from "@/lib/portal/actions";
 import { PortalField, PortalMessage, PortalTextArea } from "@/components/portal/portal-ui";
+import { MapPinPicker } from "@/components/portal/map-pin-picker";
 import type { PointRuleRecord, RewardItemRecord, ServiceJobRecord } from "@/lib/portal/types";
 import { jobCategories, jobStatuses, pointRuleTypes } from "@/lib/portal/types";
 
@@ -63,7 +64,7 @@ export function ServiceJobForm({ customers }: { customers: Array<{ id: string; n
     </div>
     <details className="rounded-xl border border-line bg-surface-strong/45">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-ink"><span className="flex items-center gap-2"><span className="text-brand-blue">⌖</span>Set exact map pin <span className="text-xs font-normal copy-muted">(optional)</span></span><span className="text-brand-blue">⌄</span></summary>
-      <div className="grid gap-4 border-t border-line px-4 pb-4 pt-3 sm:grid-cols-2"><PortalField label="Latitude" name="siteLatitude" type="number" step="any" placeholder="27.7172" /><PortalField label="Longitude" name="siteLongitude" type="number" step="any" placeholder="85.3240" /><p className="text-xs leading-5 copy-muted sm:col-span-2">An address is enough for Google Maps. Add coordinates when the site is difficult to find.</p></div>
+      <MapPinPicker latitude={null} longitude={null} />
     </details>
     <PortalTextArea label="Work description" name="description" required placeholder="Describe the customer request and expected result." />
     <PortalTextArea label="Technician notes" name="technicianNotes" placeholder="Visible to technicians after broadcast." collapsible summary="Add technician notes" />

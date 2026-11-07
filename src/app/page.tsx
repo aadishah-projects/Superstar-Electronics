@@ -11,7 +11,6 @@ import { getCatalogSnapshot } from "@/lib/catalog-source";
 import { buildWhatsAppUrl, toTelHref } from "@/lib/urls";
 import { getOrganizationSchema, getWebSiteSchema } from "@/lib/structured-data";
 
-const catalog = getCatalogSnapshot();
 const categoryHighlights: Record<string, string> = {
   "cctv-cameras": "Indoor & outdoor coverage",
   "wireless-cameras": "App-based monitoring",
@@ -24,8 +23,6 @@ const categoryHighlights: Record<string, string> = {
   "monitors-displays": "Viewing & display screens",
   "interactive-boards": "Classroom & meeting displays",
 };
-const categories = catalog.categories.map((category) => ({ ...category, products: catalog.products.filter((product) => product.categoryKey === category.key) })).filter((category) => category.products.length);
-const featuredProducts = catalog.products.filter((product) => product.categoryKey === "wireless-cameras").slice(0, 3);
 const storyMoments = [
   {
     image: "/story/installed-system.jpg",
@@ -47,7 +44,17 @@ const storyMoments = [
   },
 ] as const;
 
-export default function HomePage() {
+export default async function HomePage() {
+  const catalog = await getCatalogSnapshot();
+  const categories = catalog.categories
+    .map((category) => ({
+      ...category,
+      products: catalog.products.filter((product) => product.categoryKey === category.key),
+    }))
+    .filter((category) => category.products.length);
+  const featuredProducts = catalog.products
+    .filter((product) => product.categoryKey === "wireless-cameras")
+    .slice(0, 3);
   return (
     <>
       <JsonLd data={getOrganizationSchema()} />

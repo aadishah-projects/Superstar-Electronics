@@ -8,6 +8,8 @@ import { buildMetadata } from "@/lib/metadata";
 import { Analytics } from "@vercel/analytics/next";
 import { getCatalogSnapshot } from "@/lib/catalog-source";
 
+export const dynamic = "force-dynamic";
+
 const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
@@ -20,12 +22,12 @@ export const metadata: Metadata = buildMetadata({
   path: "/",
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const catalog = getCatalogSnapshot();
+  const catalog = await getCatalogSnapshot();
   const categoryMenuItems = catalog.categories.map((category) => {
     const preview = catalog.products.find((product) => product.categoryKey === category.key);
     return {

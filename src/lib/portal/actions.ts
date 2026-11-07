@@ -1925,6 +1925,9 @@ function parseServiceJobForm(formData: FormData) {
   const siteLongitude = longitudeText === null ? null : Number(longitudeText);
   if (siteLatitude !== null && !Number.isFinite(siteLatitude)) return { error: "Enter a valid map latitude." } as const;
   if (siteLongitude !== null && !Number.isFinite(siteLongitude)) return { error: "Enter a valid map longitude." } as const;
+  if ((siteLatitude === null) !== (siteLongitude === null)) return { error: "Enter both map coordinates, or leave both blank." } as const;
+  if (siteLatitude !== null && (siteLatitude < -90 || siteLatitude > 90)) return { error: "Latitude must be between -90 and 90." } as const;
+  if (siteLongitude !== null && (siteLongitude < -180 || siteLongitude > 180)) return { error: "Longitude must be between -180 and 180." } as const;
   return { input: serviceJobSchema.parse({
     customerId: optionalText(formData, "customerId"),
     customerName: text(formData, "customerName"),
@@ -2170,9 +2173,15 @@ export async function adjustPointsAction(_: ActionState, formData: FormData): Pr
     if (!Number.isInteger(points) || points === 0) return { error: "Enter a non-zero whole number of points." };
     const reason = text(formData, "reason");
     if (reason.length < 3) return { error: "Enter a reason for the adjustment." };
+    const technicianId = text(formData, "technicianId");
     const transactionId = newId();
-    if (isFirestorePortalBackend()) await saveFirestorePointTransaction({ id: transactionId, technicianId: text(formData, "technicianId"), points, type: "admin-adjustment", reason, actorId: user.id });
-    else applyPointAdjustment({ id: transactionId, technicianId: text(formData, "technicianId"), points, reason, actorId: user.id });
+    if (isFirestorePortalBackend()) {
+      await saveFirestorePointTransaction({ id: transactionId, technicianId, points, type: "admin-adjustment", reason, actorId: user.id });
+      await createFirestoreNotification({ id: newId(), userId: technicianId, type: "points-adjusted", title: "SS Points updated", message: `${points > 0 ? "+" : ""}${points} points were posted to your account.`, entityType: "point-transaction", entityId: transactionId });
+    } else {
+      applyPointAdjustment({ id: transactionId, technicianId, points, reason, actorId: user.id });
+      createNotification({ userId: technicianId, type: "points-adjusted", title: "SS Points updated", message: `${points > 0 ? "+" : ""}${points} points were posted to your account.`, entityType: "point-transaction", entityId: transactionId });
+    }
   } catch (error) { return { error: safeError(error, "Unable to adjust SS Points.") }; }
   revalidatePath("/portal/points");
   redirect("/portal/points?saved=adjustment");

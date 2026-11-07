@@ -1797,8 +1797,11 @@ export function respondToServiceJob(input: { jobId: string; technicianId: string
     database.prepare("INSERT INTO job_assignments (id, job_id, technician_id, assignment_type, assigned_by, reason, assigned_at) VALUES (?, ?, ?, 'claim', ?, ?, ?)").run(newId(), input.jobId, input.technicianId, input.technicianId, "First valid acceptance", timestamp);
     addJobStatusHistory(database, input.jobId, "open", "assigned", input.technicianId, "Accepted by technician", timestamp);
     const others = database.prepare("SELECT technician_id FROM job_recipients WHERE job_id = ? AND technician_id <> ?").all(input.jobId, input.technicianId) as Array<{ technician_id: string }>;
+    const technician = database.prepare("SELECT name FROM users WHERE id = ? LIMIT 1").get(input.technicianId) as { name: string } | undefined;
+    const owners = database.prepare("SELECT id FROM users WHERE role = 'owner' AND is_active = 1").all() as Array<{ id: string }>;
     const notification = database.prepare("INSERT INTO notifications (id, user_id, type, title, message, entity_type, entity_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     for (const other of others) notification.run(newId(), other.technician_id, "job-taken", "Job already taken", `${job.reference} was accepted by another technician.`, "service-job", input.jobId, timestamp);
+    for (const owner of owners) notification.run(newId(), owner.id, "job-accepted", "Job accepted", `${job.reference} was accepted by ${technician?.name ?? "a technician"}.`, "service-job", input.jobId, timestamp);
     database.exec("COMMIT");
     return { accepted: true };
   } catch (error) {

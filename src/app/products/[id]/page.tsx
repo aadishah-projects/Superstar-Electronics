@@ -9,18 +9,18 @@ import { getProductBadges } from "@/lib/product-badges";
 import { buildMetadata } from "@/lib/metadata";
 import { buildProductWhatsAppUrl, buildWhatsAppUrl, formatNpr } from "@/lib/urls";
 
-function getProduct(id: string) {
-  return getCatalogSnapshot().products.find((product) => product.id === id);
+async function getProduct(id: string) {
+  return (await getCatalogSnapshot()).products.find((product) => product.id === id);
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const product = getProduct((await params).id);
+  const product = await getProduct((await params).id);
   if (!product) return buildMetadata({ title: "Product not found", description: "The requested product could not be found.", path: "/products" });
   return buildMetadata({ title: product.name, description: `${product.name} from ${product.brand}. Ask Super Star Electronics about availability, installation, and current pricing.`, path: `/products/${product.id}` });
 }
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const product = getProduct((await params).id);
+  const product = await getProduct((await params).id);
   if (!product) notFound();
   const badges = getProductBadges(product);
   const availability = product.availability === "in_stock" ? "In Stock" : product.availability === "out_of_stock" ? "Out of Stock" : "Availability on request";

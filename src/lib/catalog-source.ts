@@ -1,11 +1,25 @@
 import { catalogCategories as staticCategories, catalogProducts as staticProducts, catalogSyncedAt } from "@/data/catalog";
 import { getProductsFromSqlite } from "@/lib/portal/queries";
+import { getFirestorePublishedProducts } from "@/lib/portal/firestore-data";
 import { isFirestorePortalBackend } from "@/lib/portal/backend";
 import type { CatalogCategory, CatalogProduct } from "@/types/site";
 
-function getManagedSnapshot() {
-  if (isFirestorePortalBackend()) return null;
-  const products = getProductsFromSqlite({ status: "published" });
+function buildManagedSnapshot(products: Array<{
+  id: string;
+  name: string;
+  brand: string;
+  model: string | null;
+  categoryKey: string;
+  categoryName: string;
+  currentPrice: number | null;
+  referencePrice: number | null;
+  priceType: "market" | "mrp";
+  priceDisplayMode: "show_price" | "contact_for_price";
+  availability: "in_stock" | "out_of_stock" | "unavailable" | "not_tracked";
+  imagePath: string | null;
+  sourceUrl: string | null;
+  sourceCategory: string | null;
+}>) {
   if (!products.length) return null;
 
   const categories = new Map<string, CatalogCategory>(staticCategories.map((category) => [category.key, category]));
@@ -46,18 +60,22 @@ function getManagedSnapshot() {
   };
 }
 
-export function getCatalogSnapshot() {
-  if (process.env.PORTAL_CATALOG_SOURCE !== "database") {
+export async function getCatalogSnapshot() {
+  const useManagedCatalog = process.env.PORTAL_CATALOG_SOURCE === "database" || isFirestorePortalBackend();
+  if (!useManagedCatalog) {
     return { categories: staticCategories, products: staticProducts, syncedAt: catalogSyncedAt };
   }
 
   try {
-    return getManagedSnapshot() ?? { categories: staticCategories, products: staticProducts, syncedAt: catalogSyncedAt };
+    const products = isFirestorePortalBackend()
+      ? await getFirestorePublishedProducts()
+      : getProductsFromSqlite({ status: "published" });
+    return buildManagedSnapshot(products) ?? { categories: staticCategories, products: staticProducts, syncedAt: catalogSyncedAt };
   } catch {
     return { categories: staticCategories, products: staticProducts, syncedAt: catalogSyncedAt };
   }
 }
 
-export function getPublicProductsForCategory(categoryKey: string) {
-  return getCatalogSnapshot().products.filter((product) => product.categoryKey === categoryKey);
+export async function getPublicProductsForCategory(categoryKey: string) {
+  return (await getCatalogSnapshot()).products.filter((product) => product.categoryKey === categoryKey);
 }

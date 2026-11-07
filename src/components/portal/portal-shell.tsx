@@ -2,11 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { logoutAction } from "@/lib/portal/actions";
 import { PortalIcon, type PortalIconName } from "@/components/portal/portal-ui";
+import { PortalNotificationCenter } from "@/components/portal/portal-notification-center";
 import { PortalNavLink } from "@/components/portal/portal-nav-link";
-import { portalRoleLabels, type PortalRole, type PortalUser } from "@/lib/portal/types";
+import { portalRoleLabels, type NotificationRecord, type PortalRole, type PortalUser } from "@/lib/portal/types";
 
 interface PortalShellProps {
   user: PortalUser;
+  initialNotifications: NotificationRecord[];
   children: React.ReactNode;
 }
 
@@ -70,7 +72,7 @@ function PortalNav({ user, onNavigate, dark = false }: { user: PortalUser; onNav
   );
 }
 
-export function PortalShell({ user, children }: PortalShellProps) {
+export function PortalShell({ user, initialNotifications, children }: PortalShellProps) {
   const canCreate = user.role !== "technician";
   return (
     <div className="portal-page min-h-screen bg-[#f5f7fb] text-ink">
@@ -106,7 +108,7 @@ export function PortalShell({ user, children }: PortalShellProps) {
               </form>
               <div className="ml-auto flex items-center gap-2 sm:gap-3">
                 {canCreate ? <Link href="/portal/jobs#quick-create" className="hidden h-9 items-center gap-1.5 rounded-lg bg-[#1463d7] px-3.5 text-[0.72rem] font-semibold text-white shadow-[0_7px_16px_rgba(20,99,215,0.18)] transition hover:bg-[#0f55bb] sm:inline-flex"><PortalIcon name="plus" className="h-3.5 w-3.5" />Quick Create</Link> : null}
-                <Link href="/portal/dashboard#notifications" aria-label="Open notifications" title="Notifications" className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#66758a] transition hover:bg-[#f4f7fb] hover:text-[#1463d7]"><PortalIcon name="bell" className="h-[1.1rem] w-[1.1rem]" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#ef6b4a]" /></Link>
+                <PortalNotificationCenter initialNotifications={initialNotifications} />
                 <Link href="/portal/dashboard#profile" className="flex items-center gap-2 rounded-lg p-1 transition hover:bg-[#f4f7fb]" aria-label="Open profile">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#dbeafe] text-[0.68rem] font-bold text-[#1463d7]">{initials(user.name)}</span>
                   <span className="hidden max-w-28 truncate text-[0.72rem] font-semibold text-[#27364a] md:block">{user.name}</span>

@@ -37,8 +37,8 @@ export function getWebSiteSchema() {
   };
 }
 
-export function getLocalBusinessSchema() {
-  const catalogProducts = getCatalogSnapshot().products;
+export async function getLocalBusinessSchema() {
+  const catalogProducts = (await getCatalogSnapshot()).products;
   return {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",

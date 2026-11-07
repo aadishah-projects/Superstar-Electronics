@@ -23,10 +23,10 @@ const quickInquiryOptions = [
   { title: "Technical Support", icon: "support" as const, href: buildWhatsAppUrl({ type: "service", subject: "technical support" }) },
 ];
 
-export default function ContactPage() {
+export default async function ContactPage() {
   return (
     <>
-      <JsonLd data={getLocalBusinessSchema()} />
+      <JsonLd data={await getLocalBusinessSchema()} />
 
       <section className="px-4 pb-12 pt-8 sm:px-6 sm:pt-10 lg:px-8">
         <Container>

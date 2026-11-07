@@ -200,6 +200,14 @@ export async function getFirestoreProducts(filters: { search?: string; status?: 
   return values.sort((left, right) => sortNewest(left, right, "updatedAt") || text(left.name).localeCompare(text(right.name))).map(mapProduct);
 }
 
+export async function getFirestorePublishedProducts(): Promise<ProductRecord[]> {
+  const values = (await all<StoredRecord>(portalCollections.products))
+    .filter((product) => product.publicationStatus === "published");
+  return values
+    .sort((left, right) => sortNewest(left, right, "updatedAt") || text(left.name).localeCompare(text(right.name)))
+    .map(mapProduct);
+}
+
 export async function getFirestoreProduct(id: string) {
   await ensureFirestoreCatalogSeeded();
   const product = await read<StoredRecord>(portalCollections.products, id);
@@ -691,8 +699,9 @@ export async function respondFirestoreToJob(input: { jobId: string; technicianId
     if (job) {
       const technicians = await getFirestoreTechnicians();
       await Promise.all(technicians.filter((technician) => technician.id !== input.technicianId).map((technician) => createFirestoreNotification({ id: crypto.randomUUID(), userId: technician.id, type: "job-taken", title: "Job already taken", message: `${job.reference} was accepted by another technician.`, entityType: "service-job", entityId: input.jobId })));
+      const owners = await getFirestoreOwnerUsers();
+      await Promise.all(owners.map((owner) => createFirestoreNotification({ id: crypto.randomUUID(), userId: owner.id, type: "job-accepted", title: "Job accepted", message: `${job.reference} was accepted by ${user?.name ?? "a technician"}.`, entityType: "service-job", entityId: input.jobId })));
     }
-    void user;
   }
   return { accepted };
 }

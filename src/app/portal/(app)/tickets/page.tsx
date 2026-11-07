@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export default async function PortalTicketsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
   const user = await requirePortalUser();
   const params = await searchParams;
-  const tickets = getServiceTickets(user.role === "technician" ? user.id : undefined, { search: params.q, status: params.status });
+  const tickets = await getServiceTickets(user.role === "technician" ? user.id : undefined, { search: params.q, status: params.status });
 
   return (
     <div className="space-y-6">

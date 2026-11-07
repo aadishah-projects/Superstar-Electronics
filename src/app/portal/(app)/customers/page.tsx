@@ -10,7 +10,7 @@ export default async function PortalCustomersPage({ searchParams }: { searchPara
   await requirePortalUser();
   const params = await searchParams;
   const search = params.search ?? "";
-  const customers = getCustomers(search);
+  const customers = await getCustomers(search);
 
   return (
     <div className="space-y-6">

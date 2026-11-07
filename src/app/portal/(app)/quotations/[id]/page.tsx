@@ -12,9 +12,9 @@ export default async function PortalQuotationDetailPage({ params, searchParams }
   await requirePortalUser(["owner", "manager", "staff"]);
   const { id } = await params;
   const query = await searchParams;
-  const quotation = getQuotation(id);
+  const quotation = await getQuotation(id);
   if (!quotation) notFound();
-  const activities = getEntityActivity("quotation", quotation.id);
+  const activities = await getEntityActivity("quotation", quotation.id);
 
   return (
     <div className="space-y-6">

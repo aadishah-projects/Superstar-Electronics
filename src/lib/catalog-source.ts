@@ -1,9 +1,11 @@
 import { catalogCategories as staticCategories, catalogProducts as staticProducts, catalogSyncedAt } from "@/data/catalog";
-import { getProducts } from "@/lib/portal/queries";
+import { getProductsFromSqlite } from "@/lib/portal/queries";
+import { isFirestorePortalBackend } from "@/lib/portal/backend";
 import type { CatalogCategory, CatalogProduct } from "@/types/site";
 
 function getManagedSnapshot() {
-  const products = getProducts({ status: "published" });
+  if (isFirestorePortalBackend()) return null;
+  const products = getProductsFromSqlite({ status: "published" });
   if (!products.length) return null;
 
   const categories = new Map<string, CatalogCategory>(staticCategories.map((category) => [category.key, category]));

@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   await requirePortalUser(["owner", "manager"]);
-  const products = getProducts();
+  const products = await getProducts();
   const rows = [productCsvHeaders.join(",")];
   for (const product of products) {
     rows.push([

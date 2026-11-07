@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { getFirebaseAdminAuth } from "@/lib/integrations/firebase-admin";
 import { getFirestorePortalUser } from "@/lib/portal/firestore-users";
+import { getPortalDataBackend } from "@/lib/portal/backend";
 import { ensureSqlitePortalShadowUser } from "@/lib/portal/shadow-user";
 
 const firebaseSessionCookieName = "sse_firebase_session";
@@ -45,7 +46,9 @@ export async function getCurrentFirebasePortalUser() {
     const decoded = await getFirebaseAdminAuth().verifySessionCookie(sessionCookie, true);
     const user = await getFirestorePortalUser(decoded.uid);
     if (!user?.isActive) return null;
-    await ensureSqlitePortalShadowUser(user);
+    if (getPortalDataBackend() !== "firestore") {
+      await ensureSqlitePortalShadowUser(user);
+    }
     return user;
   } catch (error) {
     console.error("Firebase portal session verification failed.", error instanceof Error ? error.message : String(error));

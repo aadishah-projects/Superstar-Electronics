@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export default async function PortalProductsPage({ searchParams }: { searchParams: Promise<{ search?: string; status?: string; availability?: string; priceMode?: string; saved?: string; imported?: string }> }) {
   await requirePortalUser(["owner", "manager"]);
   const params = await searchParams;
-  const products = getProducts({ search: params.search, status: params.status, availability: params.availability, priceMode: params.priceMode });
+  const products = await getProducts({ search: params.search, status: params.status, availability: params.availability, priceMode: params.priceMode });
 
   return (
     <div className="space-y-6">

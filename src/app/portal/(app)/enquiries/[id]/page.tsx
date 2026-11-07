@@ -11,10 +11,10 @@ export default async function PortalEnquiryDetailPage({ params, searchParams }: 
   await requirePortalUser(["owner", "manager", "staff"]);
   const { id } = await params;
   const query = await searchParams;
-  const enquiry = getEnquiry(id);
+  const enquiry = await getEnquiry(id);
   if (!enquiry) notFound();
-  const activities = getEntityActivity("enquiry", enquiry.id);
-  const users = getActiveUsers().filter((user) => user.isActive);
+  const [activities, activeUsers] = await Promise.all([getEntityActivity("enquiry", enquiry.id), getActiveUsers()]);
+  const users = activeUsers.filter((user) => user.isActive);
 
   return (
     <div className="space-y-6">

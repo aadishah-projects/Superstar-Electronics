@@ -12,13 +12,12 @@ export default async function PortalTicketDetailPage({ params, searchParams }: {
   const user = await requirePortalUser();
   const { id } = await params;
   const query = await searchParams;
-  const ticket = getServiceTicket(id);
+  const ticket = await getServiceTicket(id);
   if (!ticket) notFound();
   if (user.role === "technician" && ticket.assignedTo !== user.id) redirect("/portal/tickets?error=forbidden");
 
-  const activities = getEntityActivity("service-ticket", ticket.id);
-  const attachments = getTicketAttachments(ticket.id);
-  const technicians = getActiveUsers().filter((member) => member.isActive && member.role === "technician");
+  const [activities, attachments, activeUsers] = await Promise.all([getEntityActivity("service-ticket", ticket.id), getTicketAttachments(ticket.id), getActiveUsers()]);
+  const technicians = activeUsers.filter((member) => member.isActive && member.role === "technician");
   const assignedTechnician = technicians.find((technician) => technician.id === ticket.assignedTo);
   const canAssign = user.role === "owner" || user.role === "manager" || user.role === "staff";
 

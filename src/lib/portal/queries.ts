@@ -1,5 +1,7 @@
 import { getPortalDatabase } from "@/lib/portal/db";
 import { getPortalToday } from "@/lib/portal/config";
+import { isFirestorePortalBackend } from "@/lib/portal/backend";
+import * as firestoreData from "@/lib/portal/firestore-data";
 import type { ActivityRecord, DashboardMetrics, CustomerRecord, EnquiryRecord, InstallationItemRecord, JobAssignmentRecord, JobAttachmentRecord, JobCompletionRecord, JobResponseRecord, NotificationRecord, PaymentAdjustmentRecord, PaymentRecord, PointRuleRecord, PointTransactionRecord, ProductPriceHistoryRecord, ProductRecord, ProjectRecord, RedemptionRequestRecord, RewardItemRecord, PortalUser, QuotationRecord, ScheduleEventRecord, ServiceJobRecord, ServiceTicketRecord, SiteSurveyRecord, TicketAttachmentRecord } from "@/lib/portal/types";
 
 function mapCustomer(row: Record<string, unknown>) {
@@ -50,7 +52,7 @@ function mapProduct(row: Record<string, unknown>) {
   } satisfies ProductRecord;
 }
 
-export function getProducts(filters: { search?: string; status?: string; availability?: string; priceMode?: string } = {}) {
+export function getProductsFromSqlite(filters: { search?: string; status?: string; availability?: string; priceMode?: string } = {}) {
   const conditions = ["1 = 1"];
   const parameters: string[] = [];
   const search = filters.search?.trim() ?? "";
@@ -81,7 +83,7 @@ export function getProducts(filters: { search?: string; status?: string; availab
   return rows.map(mapProduct);
 }
 
-export function getProduct(id: string) {
+function getProductFromSqlite(id: string) {
   const row = getPortalDatabase().prepare(
     `SELECT id, legacy_id, name, brand, model, category_key, category_name, description, specifications,
       image_path, image_alt, source_url, source_category, current_price_paisa, reference_price_paisa,
@@ -91,7 +93,7 @@ export function getProduct(id: string) {
   return row ? mapProduct(row) : undefined;
 }
 
-export function getProductPriceHistory(productId: string) {
+function getProductPriceHistoryFromSqlite(productId: string) {
   const rows = getPortalDatabase().prepare(
     `SELECT product_price_history.id, product_price_history.product_id, product_price_history.previous_price_paisa,
       product_price_history.new_price_paisa, product_price_history.previous_reference_price_paisa,
@@ -115,7 +117,7 @@ export function getProductPriceHistory(productId: string) {
   })) satisfies ProductPriceHistoryRecord[];
 }
 
-export function getDashboardMetrics(): DashboardMetrics {
+function getDashboardMetricsFromSqlite(): DashboardMetrics {
   const database = getPortalDatabase();
   const today = getPortalToday();
   const tomorrow = new Date(`${today}T00:00:00Z`);
@@ -162,7 +164,7 @@ export function getDashboardMetrics(): DashboardMetrics {
   };
 }
 
-export function getCustomers(search = "") {
+function getCustomersFromSqlite(search = "") {
   const term = `%${search.trim()}%`;
   const rows = getPortalDatabase()
     .prepare(
@@ -176,7 +178,7 @@ export function getCustomers(search = "") {
   return rows.map(mapCustomer);
 }
 
-export function getCustomer(id: string) {
+function getCustomerFromSqlite(id: string) {
   const row = getPortalDatabase()
     .prepare(
       `SELECT id, name, business_name, customer_type, phone_primary, phone_secondary, email, address, area, notes, created_at, updated_at
@@ -187,7 +189,7 @@ export function getCustomer(id: string) {
   return row ? mapCustomer(row) : undefined;
 }
 
-export function getEnquiries(filters: { search?: string; status?: string } = {}) {
+function getEnquiriesFromSqlite(filters: { search?: string; status?: string } = {}) {
   const conditions = ["1 = 1"];
   const parameters: string[] = [];
   const search = filters.search?.trim() ?? "";
@@ -232,7 +234,7 @@ export function getEnquiries(filters: { search?: string; status?: string } = {})
   })) satisfies EnquiryRecord[];
 }
 
-export function getEnquiry(id: string) {
+function getEnquiryFromSqlite(id: string) {
   const row = getPortalDatabase()
     .prepare(
       `SELECT enquiries.id, enquiries.reference, enquiries.customer_id, customers.name AS customer_name,
@@ -265,7 +267,7 @@ export function getEnquiry(id: string) {
   } satisfies EnquiryRecord;
 }
 
-export function getProjects(filters: { search?: string; status?: string } = {}) {
+function getProjectsFromSqlite(filters: { search?: string; status?: string } = {}) {
   const conditions = ["1 = 1"];
   const parameters: string[] = [];
   const search = filters.search?.trim() ?? "";
@@ -316,7 +318,7 @@ export function getProjects(filters: { search?: string; status?: string } = {}) 
   })) satisfies ProjectRecord[];
 }
 
-export function getProject(id: string) {
+function getProjectFromSqlite(id: string) {
   const row = getPortalDatabase()
     .prepare(
       `SELECT projects.id, projects.reference, projects.customer_id, customers.name AS customer_name,
@@ -354,7 +356,7 @@ export function getProject(id: string) {
   } satisfies ProjectRecord;
 }
 
-export function getSiteSurveys(projectId: string) {
+function getSiteSurveysFromSqlite(projectId: string) {
   const rows = getPortalDatabase()
     .prepare(
       `SELECT site_surveys.id, site_surveys.project_id, site_surveys.survey_date, site_surveys.surveyor_id,
@@ -433,7 +435,7 @@ function mapQuotation(row: Record<string, unknown>): QuotationRecord {
   };
 }
 
-export function getQuotations(projectId?: string) {
+function getQuotationsFromSqlite(projectId?: string) {
   const filter = projectId ?? null;
   const rows = getPortalDatabase()
     .prepare(
@@ -452,7 +454,7 @@ export function getQuotations(projectId?: string) {
   return rows.map(mapQuotation);
 }
 
-export function getQuotation(id: string) {
+function getQuotationFromSqlite(id: string) {
   const row = getPortalDatabase()
     .prepare(
       `SELECT quotations.id, quotations.reference, quotations.customer_id, customers.name AS customer_name,
@@ -469,7 +471,7 @@ export function getQuotation(id: string) {
   return row ? mapQuotation(row) : undefined;
 }
 
-export function getPayments(projectId: string) {
+function getPaymentsFromSqlite(projectId: string) {
   const rows = getPortalDatabase()
     .prepare(
       `SELECT payments.id, payments.project_id, payments.quotation_id, quotations.reference AS quotation_reference,
@@ -498,7 +500,7 @@ export function getPayments(projectId: string) {
   })) satisfies PaymentRecord[];
 }
 
-export function getPaymentAdjustments(projectId: string) {
+function getPaymentAdjustmentsFromSqlite(projectId: string) {
   const rows = getPortalDatabase()
     .prepare(
       `SELECT payment_adjustments.id, payment_adjustments.project_id, payment_adjustments.payment_id,
@@ -525,7 +527,7 @@ export function getPaymentAdjustments(projectId: string) {
   })) satisfies PaymentAdjustmentRecord[];
 }
 
-export function getInstallationItems(projectId: string) {
+function getInstallationItemsFromSqlite(projectId: string) {
   const rows = getPortalDatabase()
     .prepare(
       `SELECT installation_items.id, installation_items.project_id, installation_items.description,
@@ -578,7 +580,7 @@ function mapServiceTicket(row: Record<string, unknown>) {
   } satisfies ServiceTicketRecord;
 }
 
-export function getServiceTickets(assignedTo?: string, filters: { search?: string; status?: string } = {}) {
+function getServiceTicketsFromSqlite(assignedTo?: string, filters: { search?: string; status?: string } = {}) {
   const conditions = ["1 = 1"];
   const parameters: string[] = [];
   if (assignedTo) {
@@ -615,7 +617,7 @@ export function getServiceTickets(assignedTo?: string, filters: { search?: strin
   return rows.map(mapServiceTicket);
 }
 
-export function getServiceTicket(id: string) {
+function getServiceTicketFromSqlite(id: string) {
   const row = getPortalDatabase()
     .prepare(
       `SELECT service_tickets.id, service_tickets.reference, service_tickets.customer_id, service_tickets.customer_name,
@@ -633,7 +635,7 @@ export function getServiceTicket(id: string) {
   return row ? mapServiceTicket(row) : undefined;
 }
 
-export function getPublicSupportTicket(tokenHash: string) {
+function getPublicSupportTicketFromSqlite(tokenHash: string) {
   const row = getPortalDatabase()
     .prepare(
       `SELECT service_tickets.reference, service_tickets.customer_name, service_tickets.category,
@@ -661,7 +663,7 @@ export function getPublicSupportTicket(tokenHash: string) {
   };
 }
 
-export function getTicketAttachments(ticketId: string) {
+function getTicketAttachmentsFromSqlite(ticketId: string) {
   const rows = getPortalDatabase()
     .prepare(
       `SELECT ticket_attachments.id, ticket_attachments.ticket_id, ticket_attachments.original_name,
@@ -690,7 +692,7 @@ export function getTicketAttachments(ticketId: string) {
   })) satisfies TicketAttachmentRecord[];
 }
 
-export function getTicketAttachment(id: string) {
+function getTicketAttachmentFromSqlite(id: string) {
   return getPortalDatabase()
     .prepare(
       `SELECT id, ticket_id, original_name, stored_name, mime_type, size_bytes
@@ -704,7 +706,7 @@ export function getTicketAttachment(id: string) {
     | undefined;
 }
 
-export function getScheduleEvents(filters: { from: string; to: string; assignedTo?: string } ) {
+function getScheduleEventsFromSqlite(filters: { from: string; to: string; assignedTo?: string } ) {
   const conditions = ["schedule_events.scheduled_start >= ?", "schedule_events.scheduled_start < ?"];
   const parameters: string[] = [filters.from, filters.to];
   if (filters.assignedTo) {
@@ -754,7 +756,7 @@ export function getScheduleEvents(filters: { from: string; to: string; assignedT
   })) satisfies ScheduleEventRecord[];
 }
 
-export function getReportSummary(from: string, to: string) {
+function getReportSummaryFromSqlite(from: string, to: string) {
   const database = getPortalDatabase();
   const enquiriesBySource = database.prepare("SELECT source, COUNT(*) AS count FROM enquiries WHERE created_at >= ? AND created_at < ? GROUP BY source ORDER BY count DESC").all(from, to) as Array<{ source: string; count: number }>;
   const projectsByStatus = database.prepare("SELECT status, COUNT(*) AS count FROM projects WHERE created_at >= ? AND created_at < ? GROUP BY status ORDER BY count DESC").all(from, to) as Array<{ status: string; count: number }>;
@@ -817,7 +819,7 @@ export function getReportSummary(from: string, to: string) {
   };
 }
 
-export function getNotifications(userId: string, limit = 12) {
+function getNotificationsFromSqlite(userId: string, limit = 12) {
   const rows = getPortalDatabase()
     .prepare(
       `SELECT id, type, title, message, entity_type, entity_id, read_at, created_at
@@ -837,7 +839,7 @@ export function getNotifications(userId: string, limit = 12) {
   })) satisfies NotificationRecord[];
 }
 
-export function getActiveUsers() {
+function getActiveUsersFromSqlite() {
   const rows = getPortalDatabase()
     .prepare("SELECT id, email, name, phone, role, is_active FROM users ORDER BY name ASC")
     .all() as Array<{ id: string; email: string; name: string; phone: string | null; role: PortalUser["role"]; is_active: number }>;
@@ -852,17 +854,18 @@ export function getActiveUsers() {
   })) satisfies PortalUser[];
 }
 
-export function getActivityFeed(limit = 8) {
-  return getPortalDatabase()
+function getActivityFeedFromSqlite(limit = 8) {
+  const rows = getPortalDatabase()
     .prepare(
       `SELECT activity_logs.action, activity_logs.entity_type, activity_logs.entity_id, activity_logs.details, activity_logs.created_at, users.name AS actor_name
        FROM activity_logs JOIN users ON users.id = activity_logs.actor_id
        ORDER BY activity_logs.created_at DESC LIMIT ?`,
     )
     .all(limit) as Array<{ action: string; entity_type: string; entity_id: string; details: string | null; created_at: string; actor_name: string }>;
+  return rows.map((row) => ({ action: row.action, entityType: row.entity_type, entityId: row.entity_id, details: row.details, actorName: row.actor_name, createdAt: row.created_at })) satisfies ActivityRecord[];
 }
 
-export function getEntityActivity(entityType: string, entityId: string) {
+function getEntityActivityFromSqlite(entityType: string, entityId: string) {
   const rows = getPortalDatabase()
     .prepare(
       `SELECT activity_logs.action, activity_logs.entity_type, activity_logs.entity_id, activity_logs.details,
@@ -923,7 +926,7 @@ const serviceJobSelect = `SELECT service_jobs.id, service_jobs.reference, servic
   FROM service_jobs LEFT JOIN users assigned ON assigned.id = service_jobs.assigned_technician_id
   JOIN users creator ON creator.id = service_jobs.created_by`;
 
-export function getServiceJobs(input: { role: "owner" | "manager" | "staff" | "technician"; userId: string; status?: string }) {
+function getServiceJobsFromSqlite(input: { role: "owner" | "manager" | "staff" | "technician"; userId: string; status?: string }) {
   const conditions = ["1 = 1"];
   const values: string[] = [];
   if (input.role === "technician") {
@@ -938,12 +941,12 @@ export function getServiceJobs(input: { role: "owner" | "manager" | "staff" | "t
   return rows.map(mapServiceJob);
 }
 
-export function getServiceJob(id: string) {
+function getServiceJobFromSqlite(id: string) {
   const row = getPortalDatabase().prepare(`${serviceJobSelect} WHERE service_jobs.id = ? LIMIT 1`).get(id) as Record<string, unknown> | undefined;
   return row ? mapServiceJob(row) : undefined;
 }
 
-export function getJobResponses(jobId: string) {
+function getJobResponsesFromSqlite(jobId: string) {
   const rows = getPortalDatabase().prepare(
     `SELECT job_responses.id, job_responses.job_id, job_responses.technician_id, users.name AS technician_name,
       job_responses.status, job_responses.reason, job_responses.responded_at
@@ -952,7 +955,7 @@ export function getJobResponses(jobId: string) {
   return rows.map((row) => ({ id: String(row.id), jobId: String(row.job_id), technicianId: String(row.technician_id), technicianName: String(row.technician_name), status: row.status as JobResponseRecord["status"], reason: (row.reason as string | null) ?? null, respondedAt: String(row.responded_at) })) satisfies JobResponseRecord[];
 }
 
-export function getJobAssignments(jobId: string) {
+function getJobAssignmentsFromSqlite(jobId: string) {
   const rows = getPortalDatabase().prepare(
     `SELECT job_assignments.id, job_assignments.job_id, job_assignments.technician_id, technicians.name AS technician_name,
       job_assignments.assignment_type, assigners.name AS assigned_by_name, job_assignments.reason, job_assignments.assigned_at, job_assignments.unassigned_at
@@ -962,7 +965,7 @@ export function getJobAssignments(jobId: string) {
   return rows.map((row) => ({ id: String(row.id), jobId: String(row.job_id), technicianId: String(row.technician_id), technicianName: String(row.technician_name), assignmentType: row.assignment_type as JobAssignmentRecord["assignmentType"], assignedByName: String(row.assigned_by_name), reason: (row.reason as string | null) ?? null, assignedAt: String(row.assigned_at), unassignedAt: (row.unassigned_at as string | null) ?? null })) satisfies JobAssignmentRecord[];
 }
 
-export function getJobCompletion(jobId: string) {
+function getJobCompletionFromSqlite(jobId: string) {
   const row = getPortalDatabase().prepare(
     `SELECT job_completion_submissions.id, job_completion_submissions.job_id, submitters.name AS submitted_by_name,
       job_completion_submissions.summary, job_completion_submissions.work_notes, job_completion_submissions.materials, job_completion_submissions.camera_count,
@@ -976,7 +979,7 @@ export function getJobCompletion(jobId: string) {
   return { id: String(row.id), jobId: String(row.job_id), submittedByName: String(row.submitted_by_name), summary: String(row.summary), workNotes: (row.work_notes as string | null) ?? null, materials: (row.materials as string | null) ?? null, cameraCount: row.camera_count === null ? null : Number(row.camera_count), status: row.status as JobCompletionRecord["status"], returnReason: (row.return_reason as string | null) ?? null, submittedAt: String(row.submitted_at), verifiedByName: (row.verified_by_name as string | null) ?? null, verifiedAt: (row.verified_at as string | null) ?? null } satisfies JobCompletionRecord;
 }
 
-export function getJobAttachments(jobId: string) {
+function getJobAttachmentsFromSqlite(jobId: string) {
   const rows = getPortalDatabase().prepare(
     `SELECT job_attachments.id, job_attachments.job_id, job_attachments.original_name,
       job_attachments.mime_type, job_attachments.size_bytes, users.name AS uploaded_by_name,
@@ -987,23 +990,23 @@ export function getJobAttachments(jobId: string) {
   return rows.map((row) => ({ id: String(row.id), jobId: String(row.job_id), originalName: String(row.original_name), mimeType: String(row.mime_type), sizeBytes: Number(row.size_bytes), uploadedByName: String(row.uploaded_by_name), createdAt: String(row.created_at) })) satisfies JobAttachmentRecord[];
 }
 
-export function getJobAttachment(id: string) {
+function getJobAttachmentFromSqlite(id: string) {
   return getPortalDatabase().prepare(
     "SELECT id, job_id, original_name, stored_name, mime_type, size_bytes FROM job_attachments WHERE id = ? LIMIT 1",
   ).get(id) as { id: string; job_id: string; original_name: string; stored_name: string; mime_type: string; size_bytes: number } | undefined;
 }
 
-export function getTechnicians() {
+function getTechniciansFromSqlite() {
   const rows = getPortalDatabase().prepare("SELECT id, name, email, phone FROM users WHERE role = 'technician' AND is_active = 1 ORDER BY name ASC").all() as Array<Record<string, unknown>>;
   return rows.map((row) => ({ id: String(row.id), name: String(row.name), email: String(row.email), phone: (row.phone as string | null) ?? null }));
 }
 
-export function getPointRules() {
+function getPointRulesFromSqlite() {
   const rows = getPortalDatabase().prepare("SELECT id, name, type, points, category, enabled, sample_label, created_at, updated_at FROM point_rules ORDER BY enabled DESC, name ASC").all() as Array<Record<string, unknown>>;
   return rows.map((row) => ({ id: String(row.id), name: String(row.name), type: row.type as PointRuleRecord["type"], points: Number(row.points), category: (row.category as PointRuleRecord["category"]), enabled: row.enabled === 1, sampleLabel: (row.sample_label as string | null) ?? null, createdAt: String(row.created_at), updatedAt: String(row.updated_at) })) satisfies PointRuleRecord[];
 }
 
-export function getPointTransactions(technicianId?: string) {
+function getPointTransactionsFromSqlite(technicianId?: string) {
   const rows = getPortalDatabase().prepare(
     `SELECT point_transactions.id, point_transactions.technician_id, technicians.name AS technician_name, point_transactions.type,
       point_transactions.points, point_transactions.job_id, service_jobs.reference AS job_reference, point_transactions.redemption_id,
@@ -1016,12 +1019,12 @@ export function getPointTransactions(technicianId?: string) {
   return rows.map((row) => ({ id: String(row.id), technicianId: String(row.technician_id), technicianName: String(row.technician_name), type: row.type as PointTransactionRecord["type"], points: Number(row.points), jobId: (row.job_id as string | null) ?? null, jobReference: (row.job_reference as string | null) ?? null, redemptionId: (row.redemption_id as string | null) ?? null, ruleId: (row.rule_id as string | null) ?? null, ruleName: (row.rule_name as string | null) ?? null, reason: (row.reason as string | null) ?? null, actorName: (row.actor_name as string | null) ?? null, createdAt: String(row.created_at) })) satisfies PointTransactionRecord[];
 }
 
-export function getPointBalance(technicianId: string) {
+function getPointBalanceFromSqlite(technicianId: string) {
   const row = getPortalDatabase().prepare("SELECT COALESCE(SUM(points), 0) AS balance, COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS earned, COALESCE(SUM(CASE WHEN points < 0 THEN -points ELSE 0 END), 0) AS redeemed FROM point_transactions WHERE technician_id = ?").get(technicianId) as { balance: number; earned: number; redeemed: number };
   return { balance: Number(row.balance), earned: Number(row.earned), redeemed: Number(row.redeemed) };
 }
 
-export function getRewardItems(includeInactive = false) {
+function getRewardItemsFromSqlite(includeInactive = false) {
   const rows = getPortalDatabase().prepare(
     `SELECT id, product_id, name, description, category, image_path, points_cost, stock_quantity, active, created_at, updated_at
      FROM reward_items ${includeInactive ? "" : "WHERE active = 1"} ORDER BY active DESC, name ASC`,
@@ -1029,7 +1032,7 @@ export function getRewardItems(includeInactive = false) {
   return rows.map((row) => ({ id: String(row.id), productId: (row.product_id as string | null) ?? null, name: String(row.name), description: (row.description as string | null) ?? null, category: String(row.category), imagePath: (row.image_path as string | null) ?? null, pointsCost: Number(row.points_cost), stockQuantity: Number(row.stock_quantity), active: row.active === 1, createdAt: String(row.created_at), updatedAt: String(row.updated_at) })) satisfies RewardItemRecord[];
 }
 
-export function getRedemptionRequests(technicianId?: string) {
+function getRedemptionRequestsFromSqlite(technicianId?: string) {
   const rows = getPortalDatabase().prepare(
     `SELECT redemption_requests.id, redemption_requests.reference, redemption_requests.technician_id, users.name AS technician_name,
       redemption_requests.reward_id, redemption_requests.reward_name_snapshot, redemption_requests.points_cost_snapshot,
@@ -1039,4 +1042,164 @@ export function getRedemptionRequests(technicianId?: string) {
      WHERE (? IS NULL OR redemption_requests.technician_id = ?) ORDER BY redemption_requests.created_at DESC`,
   ).all(technicianId ?? null, technicianId ?? null) as Array<Record<string, unknown>>;
   return rows.map((row) => ({ id: String(row.id), reference: String(row.reference), technicianId: String(row.technician_id), technicianName: String(row.technician_name), rewardId: String(row.reward_id), rewardName: String(row.reward_name_snapshot), pointsCost: Number(row.points_cost_snapshot), quantity: Number(row.quantity), status: row.status as RedemptionRequestRecord["status"], notes: (row.notes as string | null) ?? null, approvedByName: (row.approved_by_name as string | null) ?? null, createdAt: String(row.created_at), updatedAt: String(row.updated_at) })) satisfies RedemptionRequestRecord[];
+}
+
+export async function getProducts(filters: { search?: string; status?: string; availability?: string; priceMode?: string } = {}) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreProducts(filters) : getProductsFromSqlite(filters);
+}
+
+export async function getProduct(id: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreProduct(id) : getProductFromSqlite(id);
+}
+
+export async function getProductPriceHistory(productId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreProductPriceHistory(productId) : getProductPriceHistoryFromSqlite(productId);
+}
+
+export async function getDashboardMetrics() {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreDashboardMetrics() : getDashboardMetricsFromSqlite();
+}
+
+export async function getCustomers(search = "") {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreCustomers(search) : getCustomersFromSqlite(search);
+}
+
+export async function getCustomer(id: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreCustomer(id) : getCustomerFromSqlite(id);
+}
+
+export async function getEnquiries(filters: { search?: string; status?: string } = {}) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreEnquiries(filters) : getEnquiriesFromSqlite(filters);
+}
+
+export async function getEnquiry(id: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreEnquiry(id) : getEnquiryFromSqlite(id);
+}
+
+export async function getProjects(filters: { search?: string; status?: string } = {}) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreProjects(filters) : getProjectsFromSqlite(filters);
+}
+
+export async function getProject(id: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreProject(id) : getProjectFromSqlite(id);
+}
+
+export async function getSiteSurveys(projectId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreSiteSurveys(projectId) : getSiteSurveysFromSqlite(projectId);
+}
+
+export async function getQuotations(projectId?: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreQuotations(projectId) : getQuotationsFromSqlite(projectId);
+}
+
+export async function getQuotation(id: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreQuotation(id) : getQuotationFromSqlite(id);
+}
+
+export async function getPayments(projectId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestorePayments(projectId) : getPaymentsFromSqlite(projectId);
+}
+
+export async function getPaymentAdjustments(projectId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestorePaymentAdjustments(projectId) : getPaymentAdjustmentsFromSqlite(projectId);
+}
+
+export async function getInstallationItems(projectId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreInstallationItems(projectId) : getInstallationItemsFromSqlite(projectId);
+}
+
+export async function getServiceTickets(assignedTo?: string, filters: { search?: string; status?: string } = {}) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreServiceTickets(assignedTo, filters) : getServiceTicketsFromSqlite(assignedTo, filters);
+}
+
+export async function getServiceTicket(id: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreServiceTicket(id) : getServiceTicketFromSqlite(id);
+}
+
+export async function getPublicSupportTicket(tokenHash: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestorePublicSupportTicket(tokenHash) : getPublicSupportTicketFromSqlite(tokenHash);
+}
+
+export async function getTicketAttachments(ticketId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreTicketAttachments(ticketId) : getTicketAttachmentsFromSqlite(ticketId);
+}
+
+export async function getTicketAttachment(id: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreTicketAttachment(id) : getTicketAttachmentFromSqlite(id);
+}
+
+export async function getScheduleEvents(filters: { from: string; to: string; assignedTo?: string }) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreScheduleEvents(filters) : getScheduleEventsFromSqlite(filters);
+}
+
+export async function getReportSummary(from: string, to: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreReportSummary(from, to) : getReportSummaryFromSqlite(from, to);
+}
+
+export async function getNotifications(userId: string, limit = 12) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreNotifications(userId, limit) : getNotificationsFromSqlite(userId, limit);
+}
+
+export async function getActiveUsers() {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreActiveUsers() : getActiveUsersFromSqlite();
+}
+
+export async function getActivityFeed(limit = 8) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreActivityFeed(limit) : getActivityFeedFromSqlite(limit);
+}
+
+export async function getEntityActivity(entityType: string, entityId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreEntityActivity(entityType, entityId) : getEntityActivityFromSqlite(entityType, entityId);
+}
+
+export async function getServiceJobs(input: { role: "owner" | "manager" | "staff" | "technician"; userId: string; status?: string }) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreServiceJobs(input) : getServiceJobsFromSqlite(input);
+}
+
+export async function getServiceJob(id: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreServiceJob(id) : getServiceJobFromSqlite(id);
+}
+
+export async function getJobResponses(jobId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreJobResponses(jobId) : getJobResponsesFromSqlite(jobId);
+}
+
+export async function getJobAssignments(jobId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreJobAssignments(jobId) : getJobAssignmentsFromSqlite(jobId);
+}
+
+export async function getJobCompletion(jobId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreJobCompletion(jobId) : getJobCompletionFromSqlite(jobId);
+}
+
+export async function getJobAttachments(jobId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreJobAttachments(jobId) : getJobAttachmentsFromSqlite(jobId);
+}
+
+export async function getJobAttachment(id: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreJobAttachment(id) : getJobAttachmentFromSqlite(id);
+}
+
+export async function getTechnicians() {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreTechnicians() : getTechniciansFromSqlite();
+}
+
+export async function getPointRules() {
+  return isFirestorePortalBackend() ? firestoreData.getFirestorePointRules() : getPointRulesFromSqlite();
+}
+
+export async function getPointTransactions(technicianId?: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestorePointTransactions(technicianId) : getPointTransactionsFromSqlite(technicianId);
+}
+
+export async function getPointBalance(technicianId: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestorePointBalance(technicianId) : getPointBalanceFromSqlite(technicianId);
+}
+
+export async function getRewardItems(includeInactive = false) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreRewardItems(includeInactive) : getRewardItemsFromSqlite(includeInactive);
+}
+
+export async function getRedemptionRequests(technicianId?: string) {
+  return isFirestorePortalBackend() ? firestoreData.getFirestoreRedemptionRequests(technicianId) : getRedemptionRequestsFromSqlite(technicianId);
 }

@@ -67,7 +67,7 @@ import {
 } from "@/lib/portal/db";
 import { getDefaultQuotationValidityDays, getDefaultWarrantyMonths, getPortalToday, getPortalVatRate, normalizePortalPhone } from "@/lib/portal/config";
 import { endPortalSession, requirePortalUser, startPortalSession } from "@/lib/portal/auth";
-import { getPortalAuthBackend } from "@/lib/portal/backend";
+import { getPortalAuthBackend, getPortalDataBackend, isFirestorePortalBackend } from "@/lib/portal/backend";
 import { ensureSqlitePortalShadowUser } from "@/lib/portal/shadow-user";
 import {
   countFirestorePortalUsers,
@@ -84,6 +84,60 @@ import {
   updateFirestorePortalUserRole,
 } from "@/lib/portal/firestore-users";
 import { sendPortalEmail } from "@/lib/portal/notifications";
+import {
+  createFirestoreNotification,
+  createFirestoreSupportAccessToken,
+  assignFirestoreJob,
+  broadcastFirestoreJob,
+  findFirestoreCustomerByPhone,
+  findFirestoreScheduleConflict,
+  fsNextReference,
+  getFirestoreActivePortalUser,
+  getFirestoreEntity,
+  getFirestoreProducts,
+  getFirestoreOwnerUsers,
+  getFirestorePointBalance,
+  getFirestoreProjects,
+  getFirestoreRedemptionRequests,
+  getFirestoreRewardItems,
+  approveFirestoreRedemption,
+  getFirestoreServiceJob,
+  getFirestoreServiceJobs,
+  getFirestoreServiceTicket,
+  getFirestoreServiceTickets,
+  getFirestoreTechnicians,
+  hasFirestoreDocument,
+  markFirestoreNotificationRead,
+  recordFirestoreActivity,
+  respondFirestoreToJob,
+  saveFirestoreCustomer,
+  saveFirestoreEnquiry,
+  saveFirestoreInstallationItem,
+  saveFirestoreJob,
+  saveFirestoreJobAttachment,
+  saveFirestoreJobCompletion,
+  saveFirestoreJobResponse,
+  saveFirestorePayment,
+  saveFirestorePaymentAdjustment,
+  saveFirestorePointRule,
+  saveFirestorePointTransaction,
+  saveFirestoreProduct,
+  saveFirestoreProject,
+  saveFirestoreQuotation,
+  saveFirestoreRedemption,
+  saveFirestoreReward,
+  requestFirestoreRedemption,
+  saveFirestoreSchedule,
+  saveFirestoreSurvey,
+  saveFirestoreTicket,
+  saveFirestoreTicketAttachment,
+  saveFirestoreCustomerTicketAttachment,
+  submitFirestoreJobCompletion,
+  updateFirestoreJobStatus,
+  updateFirestoreDocument,
+  updateFirestoreRedemptionStatus,
+  verifyFirestoreJobCompletion,
+} from "@/lib/portal/firestore-data";
 import { buildR2AttachmentKey, markR2StoredName, putPrivateR2Object, shouldUseR2Attachments, deletePrivateR2Object } from "@/lib/integrations/r2";
 import type { ProductImportRow } from "@/lib/portal/product-csv";
 import {
@@ -265,6 +319,15 @@ export async function createProductAction(_: ActionState, formData: FormData): P
     const parsed = parseProductForm(formData);
     if ("error" in parsed) return parsed;
     const input = parsed.input;
+    if (isFirestorePortalBackend()) {
+      const products = await getFirestoreProducts();
+      if (input.legacyId && products.some((product) => product.legacyId === input.legacyId)) return { error: "That product identifier already exists." };
+      if (input.model && products.some((product) => product.brand.toLowerCase() === input.brand.toLowerCase() && product.model?.toLowerCase() === input.model?.toLowerCase())) return { error: "A product with this brand and model already exists. Use a distinct model or edit the existing product." };
+      const productId = newId();
+      const uploadedImagePath = await saveProductImage(formData);
+      await saveFirestoreProduct({ id: productId, legacyId: input.legacyId, name: input.name, brand: input.brand, model: input.model, categoryKey: input.categoryKey, categoryName: input.categoryName, description: input.description, specifications: input.specifications, imagePath: uploadedImagePath ?? input.imagePath, imageAlt: input.imageAlt ?? input.name, sourceUrl: input.sourceUrl, sourceCategory: input.sourceCategory, currentPrice: input.currentPrice, referencePrice: input.referencePrice, priceDisplayMode: input.priceDisplayMode, priceType: input.priceType, availability: input.availability, publicationStatus: input.publicationStatus, unit: input.unit, warrantyMonths: input.warrantyMonths, createdBy: user.id, updatedBy: user.id });
+      await recordFirestoreActivity({ entityType: "product", entityId: productId, action: "created", actorId: user.id, details: { name: input.name, publicationStatus: input.publicationStatus } });
+    } else {
     const database = getPortalDatabase();
     if (input.legacyId && database.prepare("SELECT id FROM products WHERE legacy_id = ? LIMIT 1").get(input.legacyId)) {
       return { error: "That product identifier already exists." };
@@ -300,6 +363,7 @@ export async function createProductAction(_: ActionState, formData: FormData): P
       createdBy: user.id,
     });
     recordActivity({ entityType: "product", entityId: productId, action: "created", actorId: user.id, details: { name: input.name, publicationStatus: input.publicationStatus } });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to create the product.") };
   }
@@ -313,6 +377,19 @@ export async function updateProductAction(productId: string, _: ActionState, for
   const user = await requirePortalUser(["owner", "manager"]);
 
   try {
+    if (isFirestorePortalBackend()) {
+      const current = (await getFirestoreProducts()).find((product) => product.id === productId);
+      if (!current) return { error: "That product no longer exists." };
+      const parsed = parseProductForm(formData);
+      if ("error" in parsed) return parsed;
+      const input = parsed.input;
+      const products = await getFirestoreProducts();
+      if (input.legacyId && products.some((product) => product.id !== productId && product.legacyId === input.legacyId)) return { error: "That product identifier already exists." };
+      if (input.model && products.some((product) => product.id !== productId && product.brand.toLowerCase() === input.brand.toLowerCase() && product.model?.toLowerCase() === input.model?.toLowerCase())) return { error: "A product with this brand and model already exists. Use a distinct model or edit the existing product." };
+      const uploadedImagePath = await saveProductImage(formData);
+      await saveFirestoreProduct({ id: productId, legacyId: input.legacyId, name: input.name, brand: input.brand, model: input.model, categoryKey: input.categoryKey, categoryName: input.categoryName, description: input.description, specifications: input.specifications, imagePath: uploadedImagePath ?? input.imagePath ?? current.imagePath, imageAlt: input.imageAlt ?? input.name, sourceUrl: input.sourceUrl, sourceCategory: input.sourceCategory, currentPrice: input.currentPrice, referencePrice: input.referencePrice, priceDisplayMode: input.priceDisplayMode, priceType: input.priceType, availability: input.availability, publicationStatus: input.publicationStatus, unit: input.unit, warrantyMonths: input.warrantyMonths, updatedBy: user.id, priceChangeReason: input.priceChangeReason });
+      await recordFirestoreActivity({ entityType: "product", entityId: productId, action: "updated", actorId: user.id, details: { name: input.name } });
+    } else {
     const current = getPortalDatabase().prepare(
       "SELECT id, legacy_id, name, brand, model, category_key, category_name, description, specifications, image_path, image_alt, source_url, source_category, current_price_paisa, reference_price_paisa, price_display_mode, availability, publication_status, unit, warranty_months FROM products WHERE id = ? LIMIT 1",
     ).get(productId) as Record<string, unknown> | undefined;
@@ -361,6 +438,7 @@ export async function updateProductAction(productId: string, _: ActionState, for
       priceChangeReason: input.priceChangeReason,
     });
     recordActivity({ entityType: "product", entityId: productId, action: "updated", actorId: user.id, details: { name: input.name, priceChanged: currentPricePaisa !== toPaisa(input.currentPrice) || currentReferencePricePaisa !== toPaisa(input.referencePrice) } });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to update the product.") };
   }
@@ -432,8 +510,13 @@ export async function importProductsCsvAction(_: ActionState, formData: FormData
       if (normalized.legacyId) legacyIds.add(normalized.legacyId);
       return normalized;
     });
-    applyProductImport(rows, user.id);
-    recordActivity({ entityType: "product-catalog", entityId: user.id, action: "csv_import", actorId: user.id, details: { rows: rows.length } });
+    if (isFirestorePortalBackend()) {
+      await Promise.all(rows.map((row) => saveFirestoreProduct({ ...row, id: row.id ?? newId(), currentPrice: row.currentPricePaisa === null ? null : row.currentPricePaisa / 100, referencePrice: row.referencePricePaisa === null ? null : row.referencePricePaisa / 100, createdBy: user.id, updatedBy: user.id })));
+      await recordFirestoreActivity({ entityType: "product-catalog", entityId: user.id, action: "csv_import", actorId: user.id, details: { rows: rows.length } });
+    } else {
+      applyProductImport(rows, user.id);
+      recordActivity({ entityType: "product-catalog", entityId: user.id, action: "csv_import", actorId: user.id, details: { rows: rows.length } });
+    }
   } catch (error) {
     return { error: safeError(error, "The product import was not applied.") };
   }
@@ -502,13 +585,11 @@ export async function setupOwnerAction(_: ActionState, formData: FormData): Prom
 
     if (authBackend === "firestore") {
       const userId = await createFirestorePortalUser({ email, name, phone, role: "owner", password });
-      try {
+      if (getPortalDataBackend() !== "firestore") {
         await ensureSqlitePortalShadowUser({ id: userId, email, name, phone, role: "owner" });
-      } catch (error) {
-        await deleteFirestorePortalUser(userId);
-        throw error;
       }
-      recordActivity({ entityType: "user", entityId: userId, action: "created_initial_owner", actorId: userId });
+      if (isFirestorePortalBackend()) await recordFirestoreActivity({ entityType: "user", entityId: userId, action: "created_initial_owner", actorId: userId });
+      else recordActivity({ entityType: "user", entityId: userId, action: "created_initial_owner", actorId: userId });
     } else {
       const userId = createUser({
         email,
@@ -597,11 +678,12 @@ export async function updatePortalUserRoleAction(_: ActionState, formData: FormD
 
     if (firestoreBackend) {
       await updateFirestorePortalUserRole(target.id, role);
-      updateUserRole(target.id, role);
+      if (getPortalDataBackend() !== "firestore") updateUserRole(target.id, role);
     } else {
       updateUserRole(target.id, role);
     }
-    recordActivity({ entityType: "user", entityId: target.id, action: "role_updated", actorId: owner.id, details: { from: target.role, to: role } });
+    if (isFirestorePortalBackend()) await recordFirestoreActivity({ entityType: "user", entityId: target.id, action: "role_updated", actorId: owner.id, details: { from: target.role, to: role } });
+    else recordActivity({ entityType: "user", entityId: target.id, action: "role_updated", actorId: owner.id, details: { from: target.role, to: role } });
     revalidatePath("/portal/team");
     return { success: `${target.name} is now a ${portalRoleLabels[role]}.` };
   } catch (error) {
@@ -634,11 +716,8 @@ export async function acceptInviteAction(token: string, _: ActionState, formData
     let userId: string;
     if (firestoreBackend) {
       userId = await createFirestorePortalUser({ email: invite.email, name: invite.name, phone: invite.phone, role: invite.role, password });
-      try {
+      if (getPortalDataBackend() !== "firestore") {
         await ensureSqlitePortalShadowUser({ id: userId, email: invite.email, name: invite.name, phone: invite.phone, role: invite.role });
-      } catch (error) {
-        await deleteFirestorePortalUser(userId);
-        throw error;
       }
       await markFirestorePortalInviteUsed(invite.tokenHash);
     } else {
@@ -651,7 +730,8 @@ export async function acceptInviteAction(token: string, _: ActionState, formData
       });
       markInviteUsed(invite.tokenHash);
     }
-    recordActivity({ entityType: "user", entityId: userId, action: "accepted_invite", actorId: userId });
+    if (isFirestorePortalBackend()) await recordFirestoreActivity({ entityType: "user", entityId: userId, action: "accepted_invite", actorId: userId });
+    else recordActivity({ entityType: "user", entityId: userId, action: "accepted_invite", actorId: userId });
   } catch (error) {
     return { error: safeError(error, "Unable to activate this account.") };
   }
@@ -670,11 +750,12 @@ export async function updatePortalProfileAction(_: ActionState, formData: FormDa
     const input = profileSchema.parse({ phone: text(formData, "phone") });
     if (getPortalAuthBackend() === "firestore") {
       await updateFirestorePortalUserPhone(user.id, input.phone);
-      updateUserPhone(user.id, input.phone);
+      if (getPortalDataBackend() !== "firestore") updateUserPhone(user.id, input.phone);
     } else {
       updateUserPhone(user.id, input.phone);
     }
-    recordActivity({ entityType: "user", entityId: user.id, action: "contact_phone_updated", actorId: user.id });
+    if (isFirestorePortalBackend()) await recordFirestoreActivity({ entityType: "user", entityId: user.id, action: "contact_phone_updated", actorId: user.id });
+    else recordActivity({ entityType: "user", entityId: user.id, action: "contact_phone_updated", actorId: user.id });
   } catch (error) {
     return { error: safeError(error, "Unable to update your contact number.") };
   }
@@ -712,14 +793,19 @@ export async function createCustomerAction(_: ActionState, formData: FormData): 
       notes: optionalText(formData, "notes"),
     });
 
-    const duplicate = findCustomerByPhone(input.phonePrimary);
-    if (duplicate) {
-      return { error: `A customer with this phone number already exists: ${duplicate.name}.` };
+    if (isFirestorePortalBackend()) {
+      const duplicate = await findFirestoreCustomerByPhone(input.phonePrimary);
+      if (duplicate) return { error: `A customer with this phone number already exists: ${duplicate.name}.` };
+      const customerId = newId();
+      await saveFirestoreCustomer({ id: customerId, ...input, createdBy: user.id });
+      await recordFirestoreActivity({ entityType: "customer", entityId: customerId, action: "created", actorId: user.id });
+    } else {
+      const duplicate = findCustomerByPhone(input.phonePrimary);
+      if (duplicate) return { error: `A customer with this phone number already exists: ${duplicate.name}.` };
+      const customerId = newId();
+      insertCustomer({ id: customerId, ...input, createdBy: user.id });
+      recordActivity({ entityType: "customer", entityId: customerId, action: "created", actorId: user.id });
     }
-
-    const customerId = newId();
-    insertCustomer({ id: customerId, ...input, createdBy: user.id });
-    recordActivity({ entityType: "customer", entityId: customerId, action: "created", actorId: user.id });
   } catch (error) {
     return { error: safeError(error, "Unable to save the customer.") };
   }
@@ -744,16 +830,20 @@ export async function updateCustomerAction(customerId: string, _: ActionState, f
       notes: optionalText(formData, "notes"),
     });
 
-    const existing = getPortalDatabase().prepare("SELECT id FROM customers WHERE id = ? LIMIT 1").get(customerId) as { id: string } | undefined;
-    if (!existing) return { error: "That customer record no longer exists." };
-
-    const duplicate = findCustomerByPhone(input.phonePrimary);
-    if (duplicate && duplicate.id !== customerId) {
-      return { error: `A customer with this phone number already exists: ${duplicate.name}.` };
+    if (isFirestorePortalBackend()) {
+      if (!(await hasFirestoreDocument("portal_customers", customerId))) return { error: "That customer record no longer exists." };
+      const duplicate = await findFirestoreCustomerByPhone(input.phonePrimary);
+      if (duplicate && duplicate.id !== customerId) return { error: `A customer with this phone number already exists: ${duplicate.name}.` };
+      await saveFirestoreCustomer({ id: customerId, ...input });
+      await recordFirestoreActivity({ entityType: "customer", entityId: customerId, action: "updated", actorId: user.id });
+    } else {
+      const existing = getPortalDatabase().prepare("SELECT id FROM customers WHERE id = ? LIMIT 1").get(customerId) as { id: string } | undefined;
+      if (!existing) return { error: "That customer record no longer exists." };
+      const duplicate = findCustomerByPhone(input.phonePrimary);
+      if (duplicate && duplicate.id !== customerId) return { error: `A customer with this phone number already exists: ${duplicate.name}.` };
+      updateCustomer({ id: customerId, ...input });
+      recordActivity({ entityType: "customer", entityId: customerId, action: "updated", actorId: user.id });
     }
-
-    updateCustomer({ id: customerId, ...input });
-    recordActivity({ entityType: "customer", entityId: customerId, action: "updated", actorId: user.id });
   } catch (error) {
     return { error: safeError(error, "Unable to update the customer.") };
   }
@@ -791,51 +881,41 @@ export async function createEnquiryAction(_: ActionState, formData: FormData): P
       assignedTo: optionalText(formData, "assignedTo"),
     });
 
-    let customerId = input.customerId;
-    if (!customerId) {
-      const duplicate = findCustomerByPhone(input.phonePrimary);
-      if (duplicate) {
-        customerId = duplicate.id;
-      } else {
-        customerId = newId();
-        insertCustomer({
-          id: customerId,
-          name: input.customerName,
-          businessName: null,
-          customerType: "individual",
-          phonePrimary: input.phonePrimary,
-          phoneSecondary: null,
-          email: null,
-          address: null,
-          area: input.area,
-          notes: null,
-          createdBy: user.id,
-        });
-        recordActivity({ entityType: "customer", entityId: customerId, action: "created_from_enquiry", actorId: user.id });
+    if (isFirestorePortalBackend()) {
+      let customerId = input.customerId;
+      if (!customerId) {
+        const duplicate = await findFirestoreCustomerByPhone(input.phonePrimary);
+        if (duplicate) customerId = duplicate.id;
+        else {
+          customerId = newId();
+          await saveFirestoreCustomer({ id: customerId, name: input.customerName, businessName: null, customerType: "individual", phonePrimary: input.phonePrimary, phoneSecondary: null, email: null, address: null, area: input.area, notes: null, createdBy: user.id });
+          await recordFirestoreActivity({ entityType: "customer", entityId: customerId, action: "created_from_enquiry", actorId: user.id });
+        }
       }
-    }
-
-    const enquiryId = newId();
-    insertEnquiry({
-      id: enquiryId,
-      reference: nextReference("enquiry", "ENQ"),
-      customerId,
-      type: input.type,
-      source: input.source,
-      status: "new",
-      area: input.area,
-      notes: input.notes,
-      followUpAt: input.followUpAt,
-      assignedTo: input.assignedTo,
-      createdBy: user.id,
-    });
-    recordActivity({ entityType: "enquiry", entityId: enquiryId, action: "created", actorId: user.id });
-    const owners = getPortalDatabase().prepare("SELECT id FROM users WHERE role = 'owner' AND is_active = 1").all() as Array<{ id: string }>;
-    for (const owner of owners) {
-      if (owner.id !== user.id) createNotification({ userId: owner.id, type: "new-enquiry", title: "New enquiry", message: `${input.customerName} was added as a new enquiry.`, entityType: "enquiry", entityId: enquiryId });
-    }
-    if (input.assignedTo && input.assignedTo !== user.id) {
-      createNotification({ userId: input.assignedTo, type: "assigned-enquiry", title: "Enquiry assigned", message: `${input.customerName}'s enquiry has been assigned to you.`, entityType: "enquiry", entityId: enquiryId });
+      const enquiryId = newId();
+      const reference = await fsNextReference("enquiry", "ENQ");
+      await saveFirestoreEnquiry({ id: enquiryId, reference, customerId, type: input.type, source: input.source, status: "new", area: input.area, notes: input.notes, followUpAt: input.followUpAt, assignedTo: input.assignedTo, createdBy: user.id });
+      await recordFirestoreActivity({ entityType: "enquiry", entityId: enquiryId, action: "created", actorId: user.id });
+      const owners = await getFirestoreOwnerUsers();
+      await Promise.all(owners.filter((owner) => owner.id !== user.id).map((owner) => createFirestoreNotification({ id: newId(), userId: owner.id, type: "new-enquiry", title: "New enquiry", message: `${input.customerName} was added as a new enquiry.`, entityType: "enquiry", entityId: enquiryId })));
+      if (input.assignedTo && input.assignedTo !== user.id) await createFirestoreNotification({ id: newId(), userId: input.assignedTo, type: "assigned-enquiry", title: "Enquiry assigned", message: `${input.customerName}'s enquiry has been assigned to you.`, entityType: "enquiry", entityId: enquiryId });
+    } else {
+      let customerId = input.customerId;
+      if (!customerId) {
+        const duplicate = findCustomerByPhone(input.phonePrimary);
+        if (duplicate) customerId = duplicate.id;
+        else {
+          customerId = newId();
+          insertCustomer({ id: customerId, name: input.customerName, businessName: null, customerType: "individual", phonePrimary: input.phonePrimary, phoneSecondary: null, email: null, address: null, area: input.area, notes: null, createdBy: user.id });
+          recordActivity({ entityType: "customer", entityId: customerId, action: "created_from_enquiry", actorId: user.id });
+        }
+      }
+      const enquiryId = newId();
+      insertEnquiry({ id: enquiryId, reference: nextReference("enquiry", "ENQ"), customerId, type: input.type, source: input.source, status: "new", area: input.area, notes: input.notes, followUpAt: input.followUpAt, assignedTo: input.assignedTo, createdBy: user.id });
+      recordActivity({ entityType: "enquiry", entityId: enquiryId, action: "created", actorId: user.id });
+      const owners = getPortalDatabase().prepare("SELECT id FROM users WHERE role = 'owner' AND is_active = 1").all() as Array<{ id: string }>;
+      for (const owner of owners) if (owner.id !== user.id) createNotification({ userId: owner.id, type: "new-enquiry", title: "New enquiry", message: `${input.customerName} was added as a new enquiry.`, entityType: "enquiry", entityId: enquiryId });
+      if (input.assignedTo && input.assignedTo !== user.id) createNotification({ userId: input.assignedTo, type: "assigned-enquiry", title: "Enquiry assigned", message: `${input.customerName}'s enquiry has been assigned to you.`, entityType: "enquiry", entityId: enquiryId });
     }
   } catch (error) {
     return { error: safeError(error, "Unable to save the enquiry.") };
@@ -870,11 +950,16 @@ export async function updateEnquiryAction(enquiryId: string, _: ActionState, for
       assignedTo: optionalText(formData, "assignedTo"),
     });
 
-    const existing = getPortalDatabase().prepare("SELECT id FROM enquiries WHERE id = ? LIMIT 1").get(enquiryId) as { id: string } | undefined;
-    if (!existing) return { error: "That enquiry record no longer exists." };
-
-    updateEnquiry({ id: enquiryId, ...input });
-    recordActivity({ entityType: "enquiry", entityId: enquiryId, action: "updated", actorId: user.id, details: { status: input.status } });
+    if (isFirestorePortalBackend()) {
+      if (!(await hasFirestoreDocument("portal_enquiries", enquiryId))) return { error: "That enquiry record no longer exists." };
+      await saveFirestoreEnquiry({ id: enquiryId, ...input });
+      await recordFirestoreActivity({ entityType: "enquiry", entityId: enquiryId, action: "updated", actorId: user.id, details: { status: input.status } });
+    } else {
+      const existing = getPortalDatabase().prepare("SELECT id FROM enquiries WHERE id = ? LIMIT 1").get(enquiryId) as { id: string } | undefined;
+      if (!existing) return { error: "That enquiry record no longer exists." };
+      updateEnquiry({ id: enquiryId, ...input });
+      recordActivity({ entityType: "enquiry", entityId: enquiryId, action: "updated", actorId: user.id, details: { status: input.status } });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to update the enquiry.") };
   }
@@ -933,15 +1018,13 @@ export async function createProjectAction(_: ActionState, formData: FormData): P
     });
     const projectId = newId();
     const warrantyStartDate = input.status === "completed" ? getPortalToday() : null;
-    insertProject({
-      id: projectId,
-      reference: nextReference("project", "PROJ"),
-      ...input,
-      warrantyStartDate,
-      warrantyEndDate: warrantyStartDate ? dateAfterMonths(warrantyStartDate, getDefaultWarrantyMonths()) : null,
-      createdBy: user.id,
-    });
-    recordActivity({ entityType: "project", entityId: projectId, action: "created", actorId: user.id });
+    if (isFirestorePortalBackend()) {
+      await saveFirestoreProject({ id: projectId, reference: await fsNextReference("project", "PROJ"), ...input, warrantyStartDate, warrantyEndDate: warrantyStartDate ? dateAfterMonths(warrantyStartDate, getDefaultWarrantyMonths()) : null, createdBy: user.id, amountPaid: 0 });
+      await recordFirestoreActivity({ entityType: "project", entityId: projectId, action: "created", actorId: user.id });
+    } else {
+      insertProject({ id: projectId, reference: nextReference("project", "PROJ"), ...input, warrantyStartDate, warrantyEndDate: warrantyStartDate ? dateAfterMonths(warrantyStartDate, getDefaultWarrantyMonths()) : null, createdBy: user.id });
+      recordActivity({ entityType: "project", entityId: projectId, action: "created", actorId: user.id });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to save the project.") };
   }
@@ -998,17 +1081,19 @@ export async function updateProjectAction(projectId: string, _: ActionState, for
       notes: optionalText(formData, "notes"),
     });
 
-    const existing = getPortalDatabase().prepare("SELECT id, warranty_start_date FROM projects WHERE id = ? LIMIT 1").get(projectId) as { id: string; warranty_start_date: string | null } | undefined;
-    if (!existing) return { error: "That project record no longer exists." };
-
-    const warrantyStartDate = input.status === "completed" && !input.warrantyStartDate && !existing.warranty_start_date ? getPortalToday() : input.warrantyStartDate;
-    updateProject({
-      id: projectId,
-      ...input,
-      warrantyStartDate,
-      warrantyEndDate: warrantyStartDate ? dateAfterMonths(warrantyStartDate, getDefaultWarrantyMonths()) : null,
-    });
-    recordActivity({ entityType: "project", entityId: projectId, action: "updated", actorId: user.id, details: { status: input.status } });
+    if (isFirestorePortalBackend()) {
+      const existing = await getFirestoreEntity("portal_projects", projectId);
+      if (!existing) return { error: "That project record no longer exists." };
+      const warrantyStartDate = input.status === "completed" && !input.warrantyStartDate && !existing.warrantyStartDate ? getPortalToday() : input.warrantyStartDate;
+      await updateFirestoreDocument("portal_projects", projectId, { ...input, warrantyStartDate, warrantyEndDate: warrantyStartDate ? dateAfterMonths(warrantyStartDate, getDefaultWarrantyMonths()) : null });
+      await recordFirestoreActivity({ entityType: "project", entityId: projectId, action: "updated", actorId: user.id, details: { status: input.status } });
+    } else {
+      const existing = getPortalDatabase().prepare("SELECT id, warranty_start_date FROM projects WHERE id = ? LIMIT 1").get(projectId) as { id: string; warranty_start_date: string | null } | undefined;
+      if (!existing) return { error: "That project record no longer exists." };
+      const warrantyStartDate = input.status === "completed" && !input.warrantyStartDate && !existing.warranty_start_date ? getPortalToday() : input.warrantyStartDate;
+      updateProject({ id: projectId, ...input, warrantyStartDate, warrantyEndDate: warrantyStartDate ? dateAfterMonths(warrantyStartDate, getDefaultWarrantyMonths()) : null });
+      recordActivity({ entityType: "project", entityId: projectId, action: "updated", actorId: user.id, details: { status: input.status } });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to update the project.") };
   }
@@ -1066,17 +1151,23 @@ export async function createSiteSurveyAction(projectId: string, _: ActionState, 
       outcome: optionalText(formData, "outcome"),
       nextSteps: optionalText(formData, "nextSteps"),
     });
-    const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE id = ? LIMIT 1").get(projectId) as { id: string } | undefined;
-    if (!project) return { error: "That project no longer exists." };
-
-    if (input.surveyorId) {
-      const surveyor = getPortalDatabase().prepare("SELECT id FROM users WHERE id = ? AND is_active = 1 LIMIT 1").get(input.surveyorId) as { id: string } | undefined;
-      if (!surveyor) return { error: "Select an active surveyor." };
+    if (isFirestorePortalBackend()) {
+      if (!(await hasFirestoreDocument("portal_projects", projectId))) return { error: "That project no longer exists." };
+      if (input.surveyorId && !(await getFirestoreActivePortalUser(input.surveyorId))) return { error: "Select an active surveyor." };
+      const surveyId = newId();
+      await saveFirestoreSurvey({ id: surveyId, projectId, ...input, recordedBy: user.id });
+      await recordFirestoreActivity({ entityType: "project", entityId: projectId, action: "site_survey_recorded", actorId: user.id, details: { surveyId } });
+    } else {
+      const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE id = ? LIMIT 1").get(projectId) as { id: string } | undefined;
+      if (!project) return { error: "That project no longer exists." };
+      if (input.surveyorId) {
+        const surveyor = getPortalDatabase().prepare("SELECT id FROM users WHERE id = ? AND is_active = 1 LIMIT 1").get(input.surveyorId) as { id: string } | undefined;
+        if (!surveyor) return { error: "Select an active surveyor." };
+      }
+      const surveyId = newId();
+      insertSiteSurvey({ id: surveyId, projectId, ...input, recordedBy: user.id });
+      recordActivity({ entityType: "project", entityId: projectId, action: "site_survey_recorded", actorId: user.id, details: { surveyId } });
     }
-
-    const surveyId = newId();
-    insertSiteSurvey({ id: surveyId, projectId, ...input, recordedBy: user.id });
-    recordActivity({ entityType: "project", entityId: projectId, action: "site_survey_recorded", actorId: user.id, details: { surveyId } });
   } catch (error) {
     return { error: safeError(error, "Unable to record the site survey.") };
   }
@@ -1113,31 +1204,32 @@ export async function createScheduleEventAction(_: ActionState, formData: FormDa
     });
     if (input.scheduledEnd <= input.scheduledStart) return { error: "The end time must be after the start time." };
 
-    if (input.projectId) {
-      const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE id = ? LIMIT 1").get(input.projectId) as { id: string } | undefined;
-      if (!project) return { error: "Select an existing project." };
+    if (isFirestorePortalBackend()) {
+      if (input.projectId && !(await hasFirestoreDocument("portal_projects", input.projectId))) return { error: "Select an existing project." };
+      if (input.ticketId && !(await hasFirestoreDocument("portal_tickets", input.ticketId))) return { error: "Select an existing support ticket." };
+      if (input.assignedTo) {
+        if (!(await getFirestoreActivePortalUser(input.assignedTo))) return { error: "Select an active team member." };
+        const conflict = await findFirestoreScheduleConflict({ start: input.scheduledStart, end: input.scheduledEnd, assignedTo: input.assignedTo });
+        if (conflict && text(formData, "allowConflict") !== "on") return { error: `This team member already has an overlapping event: ${String(conflict.title ?? "").trim()}. Check the override box to continue.` };
+      }
+      const eventId = newId();
+      await saveFirestoreSchedule({ id: eventId, ...input, status: "scheduled", createdBy: user.id });
+      if (input.assignedTo && input.assignedTo !== user.id) await createFirestoreNotification({ id: newId(), userId: input.assignedTo, type: "assigned-schedule-event", title: "Work scheduled", message: `${input.title} has been scheduled for you.`, entityType: "schedule-event", entityId: eventId });
+      await recordFirestoreActivity({ entityType: "schedule-event", entityId: eventId, action: "created", actorId: user.id, details: { eventType: input.eventType, scheduledStart: input.scheduledStart, assignedTo: input.assignedTo } });
+    } else {
+      if (input.projectId) { const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE id = ? LIMIT 1").get(input.projectId) as { id: string } | undefined; if (!project) return { error: "Select an existing project." }; }
+      if (input.ticketId) { const ticket = getPortalDatabase().prepare("SELECT id FROM service_tickets WHERE id = ? LIMIT 1").get(input.ticketId) as { id: string } | undefined; if (!ticket) return { error: "Select an existing support ticket." }; }
+      if (input.assignedTo) {
+        const assignee = getPortalDatabase().prepare("SELECT id FROM users WHERE id = ? AND is_active = 1 LIMIT 1").get(input.assignedTo) as { id: string } | undefined;
+        if (!assignee) return { error: "Select an active team member." };
+        const conflict = getPortalDatabase().prepare(`SELECT title FROM schedule_events WHERE assigned_to = ? AND status <> 'cancelled' AND scheduled_start < ? AND scheduled_end > ? LIMIT 1`).get(input.assignedTo, input.scheduledEnd, input.scheduledStart) as { title: string } | undefined;
+        if (conflict && text(formData, "allowConflict") !== "on") return { error: `This team member already has an overlapping event: ${conflict.title}. Check the override box to continue.` };
+      }
+      const eventId = newId();
+      insertScheduleEvent({ id: eventId, ...input, status: "scheduled", createdBy: user.id });
+      if (input.assignedTo && input.assignedTo !== user.id) createNotification({ userId: input.assignedTo, type: "assigned-schedule-event", title: "Work scheduled", message: `${input.title} has been scheduled for you.`, entityType: "schedule-event", entityId: eventId });
+      recordActivity({ entityType: "schedule-event", entityId: eventId, action: "created", actorId: user.id, details: { eventType: input.eventType, scheduledStart: input.scheduledStart, assignedTo: input.assignedTo } });
     }
-    if (input.ticketId) {
-      const ticket = getPortalDatabase().prepare("SELECT id FROM service_tickets WHERE id = ? LIMIT 1").get(input.ticketId) as { id: string } | undefined;
-      if (!ticket) return { error: "Select an existing support ticket." };
-    }
-    if (input.assignedTo) {
-      const assignee = getPortalDatabase().prepare("SELECT id FROM users WHERE id = ? AND is_active = 1 LIMIT 1").get(input.assignedTo) as { id: string } | undefined;
-      if (!assignee) return { error: "Select an active team member." };
-      const conflict = getPortalDatabase().prepare(
-        `SELECT title FROM schedule_events
-         WHERE assigned_to = ? AND status <> 'cancelled'
-           AND scheduled_start < ? AND scheduled_end > ? LIMIT 1`,
-      ).get(input.assignedTo, input.scheduledEnd, input.scheduledStart) as { title: string } | undefined;
-      if (conflict && text(formData, "allowConflict") !== "on") return { error: `This team member already has an overlapping event: ${conflict.title}. Check the override box to continue.` };
-    }
-
-    const eventId = newId();
-    insertScheduleEvent({ id: eventId, ...input, status: "scheduled", createdBy: user.id });
-    if (input.assignedTo && input.assignedTo !== user.id) {
-      createNotification({ userId: input.assignedTo, type: "assigned-schedule-event", title: "Work scheduled", message: `${input.title} has been scheduled for you.`, entityType: "schedule-event", entityId: eventId });
-    }
-    recordActivity({ entityType: "schedule-event", entityId: eventId, action: "created", actorId: user.id, details: { eventType: input.eventType, scheduledStart: input.scheduledStart, assignedTo: input.assignedTo } });
   } catch (error) {
     return { error: safeError(error, "Unable to create the schedule event.") };
   }
@@ -1152,12 +1244,19 @@ export async function updateScheduleEventStatusAction(eventId: string, _: Action
 
   try {
     const input = z.object({ status: z.enum(scheduleEventStatuses) }).parse({ status: text(formData, "status") });
-    const event = getPortalDatabase().prepare("SELECT id, assigned_to FROM schedule_events WHERE id = ? LIMIT 1").get(eventId) as { id: string; assigned_to: string | null } | undefined;
-    if (!event) return { error: "That schedule event no longer exists." };
-    if (user.role === "technician" && event.assigned_to !== user.id) return { error: "You can only update events assigned to you." };
-
-    updateScheduleEventStatus({ id: eventId, status: input.status });
-    recordActivity({ entityType: "schedule-event", entityId: eventId, action: "status_updated", actorId: user.id, details: { status: input.status } });
+    if (isFirestorePortalBackend()) {
+      const event = await getFirestoreEntity("portal_schedules", eventId);
+      if (!event) return { error: "That schedule event no longer exists." };
+      if (user.role === "technician" && event.assignedTo !== user.id) return { error: "You can only update events assigned to you." };
+      await updateFirestoreDocument("portal_schedules", eventId, { status: input.status });
+      await recordFirestoreActivity({ entityType: "schedule-event", entityId: eventId, action: "status_updated", actorId: user.id, details: { status: input.status } });
+    } else {
+      const event = getPortalDatabase().prepare("SELECT id, assigned_to FROM schedule_events WHERE id = ? LIMIT 1").get(eventId) as { id: string; assigned_to: string | null } | undefined;
+      if (!event) return { error: "That schedule event no longer exists." };
+      if (user.role === "technician" && event.assigned_to !== user.id) return { error: "You can only update events assigned to you." };
+      updateScheduleEventStatus({ id: eventId, status: input.status });
+      recordActivity({ entityType: "schedule-event", entityId: eventId, action: "status_updated", actorId: user.id, details: { status: input.status } });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to update the schedule event.") };
   }
@@ -1177,31 +1276,33 @@ export async function rescheduleEventAction(eventId: string, _: ActionState, for
   const user = await requirePortalUser(["owner", "manager", "staff"]);
 
   try {
-    const current = getPortalDatabase()
-      .prepare("SELECT id, title, scheduled_start, scheduled_end, assigned_to, notes FROM schedule_events WHERE id = ? LIMIT 1")
-      .get(eventId) as { id: string; title: string; scheduled_start: string; scheduled_end: string; assigned_to: string | null; notes: string | null } | undefined;
-    if (!current) return { error: "That schedule event no longer exists." };
-
     const input = rescheduleEventSchema.parse({
       scheduledStart: text(formData, "scheduledStart"),
       scheduledEnd: text(formData, "scheduledEnd"),
       notes: optionalText(formData, "notes"),
     });
     if (input.scheduledEnd <= input.scheduledStart) return { error: "The end time must be after the start time." };
-    if (current.assigned_to) {
-      const conflict = getPortalDatabase().prepare(
-        `SELECT title FROM schedule_events
-         WHERE id <> ? AND assigned_to = ? AND status <> 'cancelled'
-           AND scheduled_start < ? AND scheduled_end > ? LIMIT 1`,
-      ).get(eventId, current.assigned_to, input.scheduledEnd, input.scheduledStart) as { title: string } | undefined;
-      if (conflict && text(formData, "allowConflict") !== "on") return { error: `This team member already has an overlapping event: ${conflict.title}. Check the override box to continue.` };
+    if (isFirestorePortalBackend()) {
+      const current = await getFirestoreEntity("portal_schedules", eventId);
+      if (!current) return { error: "That schedule event no longer exists." };
+      if (current.assignedTo) {
+        const conflict = await findFirestoreScheduleConflict({ excludeId: eventId, assignedTo: String(current.assignedTo), start: input.scheduledStart, end: input.scheduledEnd });
+        if (conflict && text(formData, "allowConflict") !== "on") return { error: `This team member already has an overlapping event: ${String(conflict.title ?? "").trim()}. Check the override box to continue.` };
+      }
+      await updateFirestoreDocument("portal_schedules", eventId, { scheduledStart: input.scheduledStart, scheduledEnd: input.scheduledEnd, status: "rescheduled", notes: input.notes ?? (current.notes as string | null) ?? null });
+      if (current.assignedTo && current.assignedTo !== user.id) await createFirestoreNotification({ id: newId(), userId: String(current.assignedTo), type: "rescheduled-event", title: "Work rescheduled", message: `${String(current.title ?? "This work")} has been moved to a new time.`, entityType: "schedule-event", entityId: eventId });
+      await recordFirestoreActivity({ entityType: "schedule-event", entityId: eventId, action: "rescheduled", actorId: user.id, details: { from: { scheduledStart: current.scheduledStart, scheduledEnd: current.scheduledEnd }, to: { scheduledStart: input.scheduledStart, scheduledEnd: input.scheduledEnd } } });
+    } else {
+      const current = getPortalDatabase().prepare("SELECT id, title, scheduled_start, scheduled_end, assigned_to, notes FROM schedule_events WHERE id = ? LIMIT 1").get(eventId) as { id: string; title: string; scheduled_start: string; scheduled_end: string; assigned_to: string | null; notes: string | null } | undefined;
+      if (!current) return { error: "That schedule event no longer exists." };
+      if (current.assigned_to) {
+        const conflict = getPortalDatabase().prepare(`SELECT title FROM schedule_events WHERE id <> ? AND assigned_to = ? AND status <> 'cancelled' AND scheduled_start < ? AND scheduled_end > ? LIMIT 1`).get(eventId, current.assigned_to, input.scheduledEnd, input.scheduledStart) as { title: string } | undefined;
+        if (conflict && text(formData, "allowConflict") !== "on") return { error: `This team member already has an overlapping event: ${conflict.title}. Check the override box to continue.` };
+      }
+      updateScheduleEvent({ id: eventId, scheduledStart: input.scheduledStart, scheduledEnd: input.scheduledEnd, notes: input.notes ?? current.notes });
+      if (current.assigned_to && current.assigned_to !== user.id) createNotification({ userId: current.assigned_to, type: "rescheduled-event", title: "Work rescheduled", message: `${current.title} has been moved to a new time.`, entityType: "schedule-event", entityId: eventId });
+      recordActivity({ entityType: "schedule-event", entityId: eventId, action: "rescheduled", actorId: user.id, details: { from: { scheduledStart: current.scheduled_start, scheduledEnd: current.scheduled_end }, to: { scheduledStart: input.scheduledStart, scheduledEnd: input.scheduledEnd } } });
     }
-
-    updateScheduleEvent({ id: eventId, scheduledStart: input.scheduledStart, scheduledEnd: input.scheduledEnd, notes: input.notes ?? current.notes });
-    if (current.assigned_to && current.assigned_to !== user.id) {
-      createNotification({ userId: current.assigned_to, type: "rescheduled-event", title: "Work rescheduled", message: `${current.title} has been moved to a new time.`, entityType: "schedule-event", entityId: eventId });
-    }
-    recordActivity({ entityType: "schedule-event", entityId: eventId, action: "rescheduled", actorId: user.id, details: { from: { scheduledStart: current.scheduled_start, scheduledEnd: current.scheduled_end }, to: { scheduledStart: input.scheduledStart, scheduledEnd: input.scheduledEnd } } });
   } catch (error) {
     return { error: safeError(error, "Unable to reschedule the event.") };
   }
@@ -1272,14 +1373,6 @@ export async function createQuotationAction(_: ActionState, formData: FormData):
       items,
     });
 
-    const customer = getPortalDatabase().prepare("SELECT id FROM customers WHERE id = ? LIMIT 1").get(input.customerId) as { id: string } | undefined;
-    if (!customer) return { error: "Select an existing customer." };
-
-    if (input.projectId) {
-      const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE id = ? AND customer_id = ? LIMIT 1").get(input.projectId, input.customerId) as { id: string } | undefined;
-      if (!project) return { error: "Select a project belonging to the chosen customer." };
-    }
-
     const itemsWithTotals = input.items.map((item, index) => ({
       id: newId(),
       description: item.description,
@@ -1292,23 +1385,22 @@ export async function createQuotationAction(_: ActionState, formData: FormData):
     const vatAmount = roundMoney((subtotal * input.vatRate) / 100);
     const total = roundMoney(subtotal + vatAmount);
     const quotationId = newId();
-    insertQuotation({
-      id: quotationId,
-      reference: nextReference("quotation", "QTN"),
-      customerId: input.customerId,
-      projectId: input.projectId,
-      status: "draft",
-      vatRate: input.vatRate,
-      subtotal,
-      vatAmount,
-      total,
-      validDays: input.validDays,
-      validUntil: dateAfterDays(input.validDays),
-      notes: input.notes,
-      createdBy: user.id,
-      items: itemsWithTotals,
-    });
-    recordActivity({ entityType: "quotation", entityId: quotationId, action: "created", actorId: user.id, details: { total, vatRate: input.vatRate } });
+    if (isFirestorePortalBackend()) {
+      const customer = await getFirestoreEntity("portal_customers", input.customerId);
+      if (!customer) return { error: "Select an existing customer." };
+      if (input.projectId) {
+        const project = await getFirestoreEntity("portal_projects", input.projectId);
+        if (!project || project.customerId !== input.customerId) return { error: "Select a project belonging to the chosen customer." };
+      }
+      await saveFirestoreQuotation({ id: quotationId, reference: await fsNextReference("quotation", "QTN"), customerId: input.customerId, projectId: input.projectId, status: "draft", vatRate: input.vatRate, subtotal, vatAmount, total, validDays: input.validDays, validUntil: dateAfterDays(input.validDays), notes: input.notes, createdBy: user.id, items: itemsWithTotals });
+      await recordFirestoreActivity({ entityType: "quotation", entityId: quotationId, action: "created", actorId: user.id, details: { total, vatRate: input.vatRate } });
+    } else {
+      const customer = getPortalDatabase().prepare("SELECT id FROM customers WHERE id = ? LIMIT 1").get(input.customerId) as { id: string } | undefined;
+      if (!customer) return { error: "Select an existing customer." };
+      if (input.projectId) { const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE id = ? AND customer_id = ? LIMIT 1").get(input.projectId, input.customerId) as { id: string } | undefined; if (!project) return { error: "Select a project belonging to the chosen customer." }; }
+      insertQuotation({ id: quotationId, reference: nextReference("quotation", "QTN"), customerId: input.customerId, projectId: input.projectId, status: "draft", vatRate: input.vatRate, subtotal, vatAmount, total, validDays: input.validDays, validUntil: dateAfterDays(input.validDays), notes: input.notes, createdBy: user.id, items: itemsWithTotals });
+      recordActivity({ entityType: "quotation", entityId: quotationId, action: "created", actorId: user.id, details: { total, vatRate: input.vatRate } });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to create the quotation.") };
   }
@@ -1323,11 +1415,16 @@ export async function updateQuotationStatusAction(quotationId: string, _: Action
 
   try {
     const status = z.enum(quotationStatuses).parse(text(formData, "status"));
-    const quotation = getPortalDatabase().prepare("SELECT id FROM quotations WHERE id = ? LIMIT 1").get(quotationId) as { id: string } | undefined;
-    if (!quotation) return { error: "That quotation no longer exists." };
-
-    getPortalDatabase().prepare("UPDATE quotations SET status = ?, updated_at = ? WHERE id = ?").run(status, nowIso(), quotationId);
-    recordActivity({ entityType: "quotation", entityId: quotationId, action: "status_updated", actorId: user.id, details: { status } });
+    if (isFirestorePortalBackend()) {
+      if (!(await hasFirestoreDocument("portal_quotations", quotationId))) return { error: "That quotation no longer exists." };
+      await updateFirestoreDocument("portal_quotations", quotationId, { status });
+      await recordFirestoreActivity({ entityType: "quotation", entityId: quotationId, action: "status_updated", actorId: user.id, details: { status } });
+    } else {
+      const quotation = getPortalDatabase().prepare("SELECT id FROM quotations WHERE id = ? LIMIT 1").get(quotationId) as { id: string } | undefined;
+      if (!quotation) return { error: "That quotation no longer exists." };
+      getPortalDatabase().prepare("UPDATE quotations SET status = ?, updated_at = ? WHERE id = ?").run(status, nowIso(), quotationId);
+      recordActivity({ entityType: "quotation", entityId: quotationId, action: "status_updated", actorId: user.id, details: { status } });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to update the quotation status.") };
   }
@@ -1370,17 +1467,20 @@ export async function createPaymentAction(projectId: string, _: ActionState, for
       reference: optionalText(formData, "reference"),
       notes: optionalText(formData, "notes"),
     });
-    const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE id = ? LIMIT 1").get(projectId) as { id: string } | undefined;
-    if (!project) return { error: "That project no longer exists." };
-
-    if (input.quotationId) {
-      const quotation = getPortalDatabase().prepare("SELECT id FROM quotations WHERE id = ? AND project_id = ? LIMIT 1").get(input.quotationId, projectId) as { id: string } | undefined;
-      if (!quotation) return { error: "Select a quotation linked to this project." };
-    }
-
     const paymentId = newId();
-    insertPayment({ id: paymentId, projectId, ...input, recordedBy: user.id });
-    recordActivity({ entityType: "project", entityId: projectId, action: "payment_recorded", actorId: user.id, details: { amount: input.amount, method: input.method } });
+    if (isFirestorePortalBackend()) {
+      const project = await getFirestoreEntity("portal_projects", projectId);
+      if (!project) return { error: "That project no longer exists." };
+      if (input.quotationId) { const quotation = await getFirestoreEntity("portal_quotations", input.quotationId); if (!quotation || quotation.projectId !== projectId) return { error: "Select a quotation linked to this project." }; }
+      await saveFirestorePayment({ id: paymentId, projectId, ...input, recordedBy: user.id });
+      await recordFirestoreActivity({ entityType: "project", entityId: projectId, action: "payment_recorded", actorId: user.id, details: { amount: input.amount, method: input.method } });
+    } else {
+      const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE id = ? LIMIT 1").get(projectId) as { id: string } | undefined;
+      if (!project) return { error: "That project no longer exists." };
+      if (input.quotationId) { const quotation = getPortalDatabase().prepare("SELECT id FROM quotations WHERE id = ? AND project_id = ? LIMIT 1").get(input.quotationId, projectId) as { id: string } | undefined; if (!quotation) return { error: "Select a quotation linked to this project." }; }
+      insertPayment({ id: paymentId, projectId, ...input, recordedBy: user.id });
+      recordActivity({ entityType: "project", entityId: projectId, action: "payment_recorded", actorId: user.id, details: { amount: input.amount, method: input.method } });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to record the payment.") };
   }
@@ -1412,18 +1512,24 @@ export async function createPaymentAdjustmentAction(projectId: string, _: Action
       amount,
       reason: text(formData, "reason"),
     });
-    const payment = getPortalDatabase()
-      .prepare("SELECT id FROM payments WHERE id = ? AND project_id = ? LIMIT 1")
-      .get(input.paymentId, projectId) as { id: string } | undefined;
-    if (!payment) return { error: "Select a payment belonging to this project." };
-
-    const project = getPortalDatabase().prepare("SELECT amount_paid FROM projects WHERE id = ? LIMIT 1").get(projectId) as { amount_paid: number } | undefined;
-    if (!project) return { error: "That project no longer exists." };
-    if (input.amount > Number(project.amount_paid)) return { error: "The adjustment cannot be greater than the project's current paid balance." };
-
     const adjustmentId = newId();
-    insertPaymentAdjustment({ id: adjustmentId, projectId, ...input, recordedBy: user.id });
-    recordActivity({ entityType: "project", entityId: projectId, action: "payment_adjustment_recorded", actorId: user.id, details: { adjustmentId, paymentId: input.paymentId, type: input.type, amount: input.amount } });
+    if (isFirestorePortalBackend()) {
+      const payment = await getFirestoreEntity("portal_payments", input.paymentId);
+      const project = await getFirestoreEntity("portal_projects", projectId);
+      if (!payment || payment.projectId !== projectId) return { error: "Select a payment belonging to this project." };
+      if (!project) return { error: "That project no longer exists." };
+      if (input.amount > Number(project.amountPaid ?? 0)) return { error: "The adjustment cannot be greater than the project's current paid balance." };
+      await saveFirestorePaymentAdjustment({ id: adjustmentId, projectId, ...input, recordedBy: user.id });
+      await recordFirestoreActivity({ entityType: "project", entityId: projectId, action: "payment_adjustment_recorded", actorId: user.id, details: { adjustmentId, paymentId: input.paymentId, type: input.type, amount: input.amount } });
+    } else {
+      const payment = getPortalDatabase().prepare("SELECT id FROM payments WHERE id = ? AND project_id = ? LIMIT 1").get(input.paymentId, projectId) as { id: string } | undefined;
+      if (!payment) return { error: "Select a payment belonging to this project." };
+      const project = getPortalDatabase().prepare("SELECT amount_paid FROM projects WHERE id = ? LIMIT 1").get(projectId) as { amount_paid: number } | undefined;
+      if (!project) return { error: "That project no longer exists." };
+      if (input.amount > Number(project.amount_paid)) return { error: "The adjustment cannot be greater than the project's current paid balance." };
+      insertPaymentAdjustment({ id: adjustmentId, projectId, ...input, recordedBy: user.id });
+      recordActivity({ entityType: "project", entityId: projectId, action: "payment_adjustment_recorded", actorId: user.id, details: { adjustmentId, paymentId: input.paymentId, type: input.type, amount: input.amount } });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to record the payment correction.") };
   }
@@ -1452,18 +1558,29 @@ export async function createInstallationItemAction(projectId: string, _: ActionS
       serialNumber: optionalText(formData, "serialNumber"),
       notes: optionalText(formData, "notes"),
     });
-    const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE id = ? LIMIT 1").get(projectId) as { id: string } | undefined;
-    if (!project) return { error: "That project no longer exists." };
-
     const itemId = newId();
-    insertInstallationItem({ id: itemId, projectId, ...input, recordedBy: user.id });
-    recordActivity({
+    if (isFirestorePortalBackend()) {
+      if (!(await hasFirestoreDocument("portal_projects", projectId))) return { error: "That project no longer exists." };
+      await saveFirestoreInstallationItem({ id: itemId, projectId, ...input, recordedBy: user.id });
+      await recordFirestoreActivity({
+        entityType: "project",
+        entityId: projectId,
+        action: "installation_item_recorded",
+        actorId: user.id,
+        details: { description: input.description, installedQuantity: input.installedQuantity },
+      });
+    } else {
+      const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE id = ? LIMIT 1").get(projectId) as { id: string } | undefined;
+      if (!project) return { error: "That project no longer exists." };
+      insertInstallationItem({ id: itemId, projectId, ...input, recordedBy: user.id });
+      recordActivity({
       entityType: "project",
       entityId: projectId,
       action: "installation_item_recorded",
       actorId: user.id,
       details: { description: input.description, installedQuantity: input.installedQuantity },
-    });
+      });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to record the installed item.") };
   }
@@ -1502,36 +1619,30 @@ export async function createSupportTicketAction(_: ActionState, formData: FormDa
     const attachmentError = validateAttachment(attachment);
     if (attachmentError) return { error: attachmentError };
 
-    const customer = findCustomerByPhone(input.phone);
+    const customer = isFirestorePortalBackend() ? await findFirestoreCustomerByPhone(input.phone) : findCustomerByPhone(input.phone);
     let projectId: string | null = null;
     if (input.projectReference && customer) {
-      const project = getPortalDatabase()
-        .prepare("SELECT id FROM projects WHERE reference = ? AND customer_id = ? LIMIT 1")
-        .get(input.projectReference, customer.id) as { id: string } | undefined;
-      projectId = project?.id ?? null;
+      if (isFirestorePortalBackend()) {
+        const matching = (await getFirestoreProjects()).find((project) => project.reference === input.projectReference && project.customerId === customer.id);
+        projectId = matching?.id ?? null;
+      } else {
+        const project = getPortalDatabase().prepare("SELECT id FROM projects WHERE reference = ? AND customer_id = ? LIMIT 1").get(input.projectReference, customer.id) as { id: string } | undefined;
+        projectId = project?.id ?? null;
+      }
     }
 
     ticketId = newId();
-    reference = nextReference("service-ticket", "TKT");
-    insertServiceTicket({
-      id: ticketId,
-      reference,
-      customerId: customer?.id ?? null,
-      customerName: input.customerName,
-      phone: input.phone,
-      email: input.email,
-      projectId,
-      category: input.category,
-      priority: input.priority,
-      status: "open",
-      description: input.description,
-      preferredContact: input.preferredContact,
-    });
+    reference = isFirestorePortalBackend() ? await fsNextReference("service-ticket", "TKT") : nextReference("service-ticket", "TKT");
+    if (isFirestorePortalBackend()) {
+      await saveFirestoreTicket({ id: ticketId, reference, customerId: customer?.id ?? null, customerName: input.customerName, phone: input.phone, email: input.email, projectId, category: input.category, priority: input.priority, status: "open", description: input.description, preferredContact: input.preferredContact });
+    } else {
+      insertServiceTicket({ id: ticketId, reference, customerId: customer?.id ?? null, customerName: input.customerName, phone: input.phone, email: input.email, projectId, category: input.category, priority: input.priority, status: "open", description: input.description, preferredContact: input.preferredContact });
+    }
 
     if (attachment instanceof File && attachment.size > 0) {
       await saveCustomerTicketAttachment(ticketId, attachment);
     }
-    const owners = getPortalDatabase().prepare("SELECT email FROM users WHERE role = 'owner' AND is_active = 1").all() as Array<{ email: string }>;
+    const owners = isFirestorePortalBackend() ? await getFirestoreOwnerUsers() : (getPortalDatabase().prepare("SELECT email FROM users WHERE role = 'owner' AND is_active = 1").all() as Array<{ email: string }>);
     await Promise.all(owners.map((owner) => sendPortalEmail({
       to: owner.email,
       subject: `New support ticket ${reference}`,
@@ -1553,20 +1664,16 @@ export async function customerTicketAccessAction(_: ActionState, formData: FormD
   let rawToken = "";
   try {
     const input = supportAccessSchema.parse({ reference: text(formData, "reference"), phone: text(formData, "phone") });
-    const ticket = getPortalDatabase()
-      .prepare("SELECT id, phone FROM service_tickets WHERE reference = ? LIMIT 1")
-      .get(input.reference) as { id: string; phone: string } | undefined;
-
-    if (!ticket || normalizePortalPhone(ticket.phone) !== normalizePortalPhone(input.phone)) {
-      return { error: "We could not verify that ticket and phone combination." };
-    }
-
     rawToken = createToken();
-    createSupportAccessToken({
-      tokenHash: hashToken(rawToken),
-      ticketId: ticket.id,
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-    });
+    if (isFirestorePortalBackend()) {
+      const ticket = (await getFirestoreServiceTickets(undefined, {})).find((item) => item.reference === input.reference);
+      if (!ticket || normalizePortalPhone(ticket.phone) !== normalizePortalPhone(input.phone)) return { error: "We could not verify that ticket and phone combination." };
+      await createFirestoreSupportAccessToken({ tokenHash: hashToken(rawToken), ticketId: ticket.id, expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() });
+    } else {
+      const ticket = getPortalDatabase().prepare("SELECT id, phone FROM service_tickets WHERE reference = ? LIMIT 1").get(input.reference) as { id: string; phone: string } | undefined;
+      if (!ticket || normalizePortalPhone(ticket.phone) !== normalizePortalPhone(input.phone)) return { error: "We could not verify that ticket and phone combination." };
+      createSupportAccessToken({ tokenHash: hashToken(rawToken), ticketId: ticket.id, expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to open the support status page.") };
   }
@@ -1600,15 +1707,8 @@ async function saveTicketAttachment(ticketId: string, file: File, uploadedBy: st
     const key = buildR2AttachmentKey({ kind: "tickets", entityId: ticketId, attachmentId, extension });
     await putPrivateR2Object({ key, body: new Uint8Array(await file.arrayBuffer()), contentType: file.type });
     try {
-      insertTicketAttachment({
-        id: attachmentId,
-        ticketId,
-        originalName: file.name.slice(0, 180),
-        storedName: markR2StoredName(key),
-        mimeType: file.type,
-        sizeBytes: file.size,
-        uploadedBy,
-      });
+      if (isFirestorePortalBackend()) await saveFirestoreTicketAttachment({ id: attachmentId, ticketId, originalName: file.name.slice(0, 180), storedName: markR2StoredName(key), mimeType: file.type, sizeBytes: file.size, uploadedBy });
+      else insertTicketAttachment({ id: attachmentId, ticketId, originalName: file.name.slice(0, 180), storedName: markR2StoredName(key), mimeType: file.type, sizeBytes: file.size, uploadedBy });
     } catch (error) {
       await deletePrivateR2Object(key).catch(() => undefined);
       throw error;
@@ -1620,15 +1720,8 @@ async function saveTicketAttachment(ticketId: string, file: File, uploadedBy: st
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(path.join(directory, storedName), Buffer.from(await file.arrayBuffer()));
   try {
-    insertTicketAttachment({
-      id: attachmentId,
-      ticketId,
-      originalName: file.name.slice(0, 180),
-      storedName,
-      mimeType: file.type,
-      sizeBytes: file.size,
-      uploadedBy,
-    });
+    if (isFirestorePortalBackend()) await saveFirestoreTicketAttachment({ id: attachmentId, ticketId, originalName: file.name.slice(0, 180), storedName, mimeType: file.type, sizeBytes: file.size, uploadedBy });
+    else insertTicketAttachment({ id: attachmentId, ticketId, originalName: file.name.slice(0, 180), storedName, mimeType: file.type, sizeBytes: file.size, uploadedBy });
   } catch (error) {
     await fs.rm(path.join(directory, storedName), { force: true });
     throw error;
@@ -1643,15 +1736,8 @@ async function saveJobAttachment(jobId: string, file: File, uploadedBy: string) 
     const key = buildR2AttachmentKey({ kind: "jobs", entityId: jobId, attachmentId, extension });
     await putPrivateR2Object({ key, body: new Uint8Array(await file.arrayBuffer()), contentType: file.type });
     try {
-      insertJobAttachment({
-        id: attachmentId,
-        jobId,
-        originalName: file.name.slice(0, 180),
-        storedName: markR2StoredName(key),
-        mimeType: file.type,
-        sizeBytes: file.size,
-        uploadedBy,
-      });
+      if (isFirestorePortalBackend()) await saveFirestoreJobAttachment({ id: attachmentId, jobId, originalName: file.name.slice(0, 180), storedName: markR2StoredName(key), mimeType: file.type, sizeBytes: file.size, uploadedBy });
+      else insertJobAttachment({ id: attachmentId, jobId, originalName: file.name.slice(0, 180), storedName: markR2StoredName(key), mimeType: file.type, sizeBytes: file.size, uploadedBy });
     } catch (error) {
       await deletePrivateR2Object(key).catch(() => undefined);
       throw error;
@@ -1663,7 +1749,8 @@ async function saveJobAttachment(jobId: string, file: File, uploadedBy: string) 
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(path.join(directory, storedName), Buffer.from(await file.arrayBuffer()));
   try {
-    insertJobAttachment({ id: attachmentId, jobId, originalName: file.name.slice(0, 180), storedName, mimeType: file.type, sizeBytes: file.size, uploadedBy });
+    if (isFirestorePortalBackend()) await saveFirestoreJobAttachment({ id: attachmentId, jobId, originalName: file.name.slice(0, 180), storedName, mimeType: file.type, sizeBytes: file.size, uploadedBy });
+    else insertJobAttachment({ id: attachmentId, jobId, originalName: file.name.slice(0, 180), storedName, mimeType: file.type, sizeBytes: file.size, uploadedBy });
   } catch (error) {
     await fs.rm(path.join(directory, storedName), { force: true });
     throw error;
@@ -1678,14 +1765,8 @@ async function saveCustomerTicketAttachment(ticketId: string, file: File) {
     const key = buildR2AttachmentKey({ kind: "tickets", entityId: ticketId, attachmentId, extension });
     await putPrivateR2Object({ key, body: new Uint8Array(await file.arrayBuffer()), contentType: file.type });
     try {
-      insertCustomerTicketAttachment({
-        id: attachmentId,
-        ticketId,
-        originalName: file.name.slice(0, 180),
-        storedName: markR2StoredName(key),
-        mimeType: file.type,
-        sizeBytes: file.size,
-      });
+      if (isFirestorePortalBackend()) await saveFirestoreCustomerTicketAttachment({ id: attachmentId, ticketId, originalName: file.name.slice(0, 180), storedName: markR2StoredName(key), mimeType: file.type, sizeBytes: file.size });
+      else insertCustomerTicketAttachment({ id: attachmentId, ticketId, originalName: file.name.slice(0, 180), storedName: markR2StoredName(key), mimeType: file.type, sizeBytes: file.size });
     } catch (error) {
       await deletePrivateR2Object(key).catch(() => undefined);
       throw error;
@@ -1697,14 +1778,8 @@ async function saveCustomerTicketAttachment(ticketId: string, file: File) {
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(path.join(directory, storedName), Buffer.from(await file.arrayBuffer()));
   try {
-    insertCustomerTicketAttachment({
-      id: attachmentId,
-      ticketId,
-      originalName: file.name.slice(0, 180),
-      storedName,
-      mimeType: file.type,
-      sizeBytes: file.size,
-    });
+    if (isFirestorePortalBackend()) await saveFirestoreCustomerTicketAttachment({ id: attachmentId, ticketId, originalName: file.name.slice(0, 180), storedName, mimeType: file.type, sizeBytes: file.size });
+    else insertCustomerTicketAttachment({ id: attachmentId, ticketId, originalName: file.name.slice(0, 180), storedName, mimeType: file.type, sizeBytes: file.size });
   } catch (error) {
     await fs.rm(path.join(directory, storedName), { force: true });
     throw error;
@@ -1715,16 +1790,18 @@ export async function uploadTicketAttachmentAction(ticketId: string, _: ActionSt
   const user = await requirePortalUser();
 
   try {
-    const current = getPortalDatabase().prepare("SELECT id, assigned_to FROM service_tickets WHERE id = ? LIMIT 1").get(ticketId) as { id: string; assigned_to: string | null } | undefined;
+    const current = isFirestorePortalBackend() ? await getFirestoreServiceTicket(ticketId) : getPortalDatabase().prepare("SELECT id, assigned_to FROM service_tickets WHERE id = ? LIMIT 1").get(ticketId) as { id: string; assigned_to: string | null } | undefined;
     if (!current) return { error: "That support ticket no longer exists." };
-    if (user.role === "technician" && current.assigned_to !== user.id) return { error: "You can only add files to tickets assigned to you." };
+    const currentAssignedTo = "assignedTo" in current ? current.assignedTo : current.assigned_to;
+    if (user.role === "technician" && currentAssignedTo !== user.id) return { error: "You can only add files to tickets assigned to you." };
 
     const attachment = formData.get("attachment");
     const validationError = validateAttachment(attachment);
     if (validationError) return { error: validationError };
     if (!(attachment instanceof File) || attachment.size === 0) return { error: "Choose a file to attach." };
     await saveTicketAttachment(ticketId, attachment, user.id);
-    recordActivity({ entityType: "service-ticket", entityId: ticketId, action: "attachment_added", actorId: user.id, details: { fileName: attachment.name.slice(0, 180) } });
+    if (isFirestorePortalBackend()) await recordFirestoreActivity({ entityType: "service-ticket", entityId: ticketId, action: "attachment_added", actorId: user.id, details: { fileName: attachment.name.slice(0, 180) } });
+    else recordActivity({ entityType: "service-ticket", entityId: ticketId, action: "attachment_added", actorId: user.id, details: { fileName: attachment.name.slice(0, 180) } });
   } catch (error) {
     return { error: safeError(error, "Unable to save the attachment.") };
   }
@@ -1737,11 +1814,10 @@ export async function updateServiceTicketAction(ticketId: string, _: ActionState
   const user = await requirePortalUser();
 
   try {
-    const current = getPortalDatabase()
-      .prepare("SELECT id, reference, assigned_to FROM service_tickets WHERE id = ? LIMIT 1")
-      .get(ticketId) as { id: string; reference: string; assigned_to: string | null } | undefined;
+    const current = isFirestorePortalBackend() ? await getFirestoreServiceTicket(ticketId) : getPortalDatabase().prepare("SELECT id, reference, assigned_to FROM service_tickets WHERE id = ? LIMIT 1").get(ticketId) as { id: string; reference: string; assigned_to: string | null } | undefined;
     if (!current) return { error: "That support ticket no longer exists." };
-    if (user.role === "technician" && current.assigned_to !== user.id) {
+    const currentAssignedTo = "assignedTo" in current ? current.assignedTo : current.assigned_to;
+    if (user.role === "technician" && currentAssignedTo !== user.id) {
       return { error: "You can only update tickets assigned to you." };
     }
 
@@ -1752,18 +1828,18 @@ export async function updateServiceTicketAction(ticketId: string, _: ActionState
       customerUpdate: optionalText(formData, "customerUpdate"),
       resolutionSummary: optionalText(formData, "resolutionSummary"),
     });
-    const assignedTo = user.role === "technician" ? current.assigned_to : input.assignedTo;
+    const assignedTo = user.role === "technician" ? currentAssignedTo : input.assignedTo;
 
     if (assignedTo) {
-      const technician = getPortalDatabase()
-        .prepare("SELECT id FROM users WHERE id = ? AND role = 'technician' AND is_active = 1 LIMIT 1")
-        .get(assignedTo) as { id: string } | undefined;
+      const technician = isFirestorePortalBackend() ? (await getFirestoreActivePortalUser(assignedTo)) : getPortalDatabase().prepare("SELECT id FROM users WHERE id = ? AND role = 'technician' AND is_active = 1 LIMIT 1").get(assignedTo) as { id: string } | undefined;
       if (!technician) return { error: "Select an active technician." };
     }
 
-    updateServiceTicket({ id: ticketId, ...input, assignedTo });
-    if (assignedTo && assignedTo !== current.assigned_to) {
-      createNotification({
+    if (isFirestorePortalBackend()) await updateFirestoreDocument("portal_tickets", ticketId, { ...input, assignedTo, assignedToName: assignedTo ? (await getFirestoreActivePortalUser(assignedTo))?.name ?? null : null });
+    else updateServiceTicket({ id: ticketId, ...input, assignedTo });
+    if (assignedTo && assignedTo !== currentAssignedTo) {
+      if (isFirestorePortalBackend()) await createFirestoreNotification({
+        id: newId(),
         userId: assignedTo,
         type: "assigned-service-ticket",
         title: "Support ticket assigned",
@@ -1771,7 +1847,15 @@ export async function updateServiceTicketAction(ticketId: string, _: ActionState
         entityType: "service-ticket",
         entityId: ticketId,
       });
-      const technician = getPortalDatabase().prepare("SELECT email FROM users WHERE id = ? LIMIT 1").get(assignedTo) as { email: string } | undefined;
+      else createNotification({
+        userId: assignedTo,
+        type: "assigned-service-ticket",
+        title: "Support ticket assigned",
+        message: `${current.reference} has been assigned to you.`,
+        entityType: "service-ticket",
+        entityId: ticketId,
+      });
+      const technician = isFirestorePortalBackend() ? await getFirestoreActivePortalUser(assignedTo) : getPortalDatabase().prepare("SELECT email FROM users WHERE id = ? LIMIT 1").get(assignedTo) as { email: string } | undefined;
       if (technician) {
         await sendPortalEmail({
           to: technician.email,
@@ -1780,7 +1864,14 @@ export async function updateServiceTicketAction(ticketId: string, _: ActionState
         });
       }
     }
-    recordActivity({
+    if (isFirestorePortalBackend()) await recordFirestoreActivity({
+      entityType: "service-ticket",
+      entityId: ticketId,
+      action: "updated",
+      actorId: user.id,
+      details: { status: input.status, assignedTo },
+    });
+    else recordActivity({
       entityType: "service-ticket",
       entityId: ticketId,
       action: "updated",
@@ -1862,18 +1953,20 @@ export async function createServiceJobAction(_: ActionState, formData: FormData)
     const parsed = parseServiceJobForm(formData);
     if ("error" in parsed) return parsed;
     const input = parsed.input;
-    if (input.customerId) {
-      const customer = getPortalDatabase().prepare("SELECT id FROM customers WHERE id = ? LIMIT 1").get(input.customerId) as { id: string } | undefined;
-      if (!customer) return { error: "Select an existing customer or leave the customer blank." };
-    }
+    if (input.customerId && isFirestorePortalBackend() && !(await hasFirestoreDocument("portal_customers", input.customerId))) return { error: "Select an existing customer or leave the customer blank." };
+    if (input.customerId && !isFirestorePortalBackend()) { const customer = getPortalDatabase().prepare("SELECT id FROM customers WHERE id = ? LIMIT 1").get(input.customerId) as { id: string } | undefined; if (!customer) return { error: "Select an existing customer or leave the customer blank." }; }
     const id = newId();
-    insertServiceJob({ id, reference: nextReference("service-job", "JOB"), ...input, createdBy: user.id });
+    if (isFirestorePortalBackend()) await saveFirestoreJob({ id, reference: await fsNextReference("service-job", "JOB"), ...input, status: "draft", createdBy: user.id });
+    else insertServiceJob({ id, reference: nextReference("service-job", "JOB"), ...input, createdBy: user.id });
     if (text(formData, "intent") === "broadcast") {
-      broadcastServiceJob(id, user.id, input.acceptanceDeadline);
+      if (isFirestorePortalBackend()) await broadcastFirestoreJob(id, user.id, input.acceptanceDeadline);
+      else broadcastServiceJob(id, user.id, input.acceptanceDeadline);
     }
-    recordActivity({ entityType: "service-job", entityId: id, action: "created", actorId: user.id, details: { category: input.category, urgency: input.urgency } });
+    if (isFirestorePortalBackend()) await recordFirestoreActivity({ entityType: "service-job", entityId: id, action: "created", actorId: user.id, details: { category: input.category, urgency: input.urgency } });
+    else recordActivity({ entityType: "service-job", entityId: id, action: "created", actorId: user.id, details: { category: input.category, urgency: input.urgency } });
     if (text(formData, "intent") === "broadcast") {
-      recordActivity({ entityType: "service-job", entityId: id, action: "broadcast", actorId: user.id });
+      if (isFirestorePortalBackend()) await recordFirestoreActivity({ entityType: "service-job", entityId: id, action: "broadcast", actorId: user.id });
+      else recordActivity({ entityType: "service-job", entityId: id, action: "broadcast", actorId: user.id });
     }
   } catch (error) {
     return { error: safeError(error, "Unable to create the technician job.") };
@@ -1886,8 +1979,13 @@ export async function createServiceJobAction(_: ActionState, formData: FormData)
 export async function broadcastServiceJobAction(jobId: string, _: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requirePortalUser(["owner", "manager", "staff"]);
   try {
-    broadcastServiceJob(jobId, user.id, optionalText(formData, "acceptanceDeadline"));
-    recordActivity({ entityType: "service-job", entityId: jobId, action: "broadcast", actorId: user.id });
+    if (isFirestorePortalBackend()) {
+      await broadcastFirestoreJob(jobId, user.id, optionalText(formData, "acceptanceDeadline"));
+      await recordFirestoreActivity({ entityType: "service-job", entityId: jobId, action: "broadcast", actorId: user.id });
+    } else {
+      broadcastServiceJob(jobId, user.id, optionalText(formData, "acceptanceDeadline"));
+      recordActivity({ entityType: "service-job", entityId: jobId, action: "broadcast", actorId: user.id });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to broadcast the job.") };
   }
@@ -1901,7 +1999,8 @@ export async function respondToServiceJobAction(jobId: string, _: ActionState, f
   const user = await requirePortalUser(["technician"]);
   try {
     const status = z.enum(["accepted", "declined"] as const).parse(text(formData, "status"));
-    respondToServiceJob({ jobId, technicianId: user.id, status, reason: optionalText(formData, "reason") });
+    if (isFirestorePortalBackend()) await respondFirestoreToJob({ jobId, technicianId: user.id, status, reason: optionalText(formData, "reason") });
+    else respondToServiceJob({ jobId, technicianId: user.id, status, reason: optionalText(formData, "reason") });
   } catch (error) {
     return { error: safeError(error, "Unable to respond to this job.") };
   }
@@ -1914,10 +2013,16 @@ export async function assignServiceJobAction(jobId: string, _: ActionState, form
   const user = await requirePortalUser(["owner", "manager", "staff"]);
   try {
     const technicianId = text(formData, "technicianId");
-    const technician = getPortalDatabase().prepare("SELECT id FROM users WHERE id = ? AND role = 'technician' AND is_active = 1 LIMIT 1").get(technicianId) as { id: string } | undefined;
-    if (!technician) return { error: "Select an active technician." };
-    assignServiceJob({ jobId, technicianId, actorId: user.id, reason: optionalText(formData, "reason") });
-    recordActivity({ entityType: "service-job", entityId: jobId, action: "assigned", actorId: user.id, details: { technicianId } });
+    if (isFirestorePortalBackend()) {
+      if (!(await getFirestoreActivePortalUser(technicianId))?.isActive) return { error: "Select an active technician." };
+      await assignFirestoreJob({ jobId, technicianId, actorId: user.id, reason: optionalText(formData, "reason") });
+      await recordFirestoreActivity({ entityType: "service-job", entityId: jobId, action: "assigned", actorId: user.id, details: { technicianId } });
+    } else {
+      const technician = getPortalDatabase().prepare("SELECT id FROM users WHERE id = ? AND role = 'technician' AND is_active = 1 LIMIT 1").get(technicianId) as { id: string } | undefined;
+      if (!technician) return { error: "Select an active technician." };
+      assignServiceJob({ jobId, technicianId, actorId: user.id, reason: optionalText(formData, "reason") });
+      recordActivity({ entityType: "service-job", entityId: jobId, action: "assigned", actorId: user.id, details: { technicianId } });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to assign the job.") };
   }
@@ -1931,13 +2036,15 @@ export async function updateServiceJobStatusAction(jobId: string, _: ActionState
   const user = await requirePortalUser();
   try {
     const status = z.enum(jobStatuses).parse(text(formData, "status"));
-    const job = getPortalDatabase().prepare("SELECT assigned_technician_id FROM service_jobs WHERE id = ? LIMIT 1").get(jobId) as { assigned_technician_id: string | null } | undefined;
+    const job = isFirestorePortalBackend() ? await getFirestoreServiceJob(jobId) : getPortalDatabase().prepare("SELECT assigned_technician_id FROM service_jobs WHERE id = ? LIMIT 1").get(jobId) as { assigned_technician_id: string | null } | undefined;
     if (!job) return { error: "That job no longer exists." };
     if (status === "open") return { error: "Use the broadcast action to open this job for technician acceptance." };
     if (status === "assigned") return { error: "Use the assignment action to choose a technician." };
     if (status === "completed" || status === "awaiting-verification") return { error: "Use the completion review workflow to move a job into verification or completed status." };
-    if (user.role === "technician" && (job.assigned_technician_id !== user.id || status !== "in-progress")) return { error: "You can only move an assigned job into progress." };
-    updateServiceJobStatus({ jobId, status, actorId: user.id, reason: optionalText(formData, "reason") });
+    const assignedTechnicianId = "assignedTechnicianId" in job ? job.assignedTechnicianId : job.assigned_technician_id;
+    if (user.role === "technician" && (assignedTechnicianId !== user.id || status !== "in-progress")) return { error: "You can only move an assigned job into progress." };
+    if (isFirestorePortalBackend()) await updateFirestoreJobStatus({ jobId, status, actorId: user.id, reason: optionalText(formData, "reason") });
+    else updateServiceJobStatus({ jobId, status, actorId: user.id, reason: optionalText(formData, "reason") });
   } catch (error) {
     return { error: safeError(error, "Unable to update the job status.") };
   }
@@ -1954,8 +2061,13 @@ export async function submitJobCompletionAction(jobId: string, _: ActionState, f
     const cameraCountText = optionalText(formData, "cameraCount");
     const cameraCount = cameraCountText === null ? null : Number(cameraCountText);
     if (cameraCount !== null && (!Number.isInteger(cameraCount) || cameraCount < 1)) return { error: "Enter a valid camera count." };
-    submitJobCompletion({ jobId, technicianId: user.id, summary, workNotes: optionalText(formData, "workNotes"), materials: optionalText(formData, "materials"), cameraCount });
-    recordActivity({ entityType: "service-job", entityId: jobId, action: "completion_submitted", actorId: user.id });
+    if (isFirestorePortalBackend()) {
+      await submitFirestoreJobCompletion({ jobId, technicianId: user.id, summary, workNotes: optionalText(formData, "workNotes"), materials: optionalText(formData, "materials"), cameraCount });
+      await recordFirestoreActivity({ entityType: "service-job", entityId: jobId, action: "completion_submitted", actorId: user.id });
+    } else {
+      submitJobCompletion({ jobId, technicianId: user.id, summary, workNotes: optionalText(formData, "workNotes"), materials: optionalText(formData, "materials"), cameraCount });
+      recordActivity({ entityType: "service-job", entityId: jobId, action: "completion_submitted", actorId: user.id });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to submit the completion record.") };
   }
@@ -1967,15 +2079,17 @@ export async function submitJobCompletionAction(jobId: string, _: ActionState, f
 export async function uploadJobAttachmentAction(jobId: string, _: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requirePortalUser();
   try {
-    const job = getPortalDatabase().prepare("SELECT id, assigned_technician_id FROM service_jobs WHERE id = ? LIMIT 1").get(jobId) as { id: string; assigned_technician_id: string | null } | undefined;
+    const job = isFirestorePortalBackend() ? await getFirestoreServiceJob(jobId) : getPortalDatabase().prepare("SELECT id, assigned_technician_id FROM service_jobs WHERE id = ? LIMIT 1").get(jobId) as { id: string; assigned_technician_id: string | null } | undefined;
     if (!job) return { error: "That job no longer exists." };
-    if (user.role === "technician" && job.assigned_technician_id !== user.id) return { error: "You can only add evidence to a job assigned to you." };
+    const assignedTechnicianId = "assignedTechnicianId" in job ? job.assignedTechnicianId : job.assigned_technician_id;
+    if (user.role === "technician" && assignedTechnicianId !== user.id) return { error: "You can only add evidence to a job assigned to you." };
     const attachment = formData.get("attachment");
     const validationError = validateAttachment(attachment);
     if (validationError) return { error: validationError };
     if (!(attachment instanceof File) || attachment.size === 0) return { error: "Choose a file to attach." };
     await saveJobAttachment(jobId, attachment, user.id);
-    recordActivity({ entityType: "service-job", entityId: jobId, action: "evidence_added", actorId: user.id, details: { fileName: attachment.name.slice(0, 180) } });
+    if (isFirestorePortalBackend()) await recordFirestoreActivity({ entityType: "service-job", entityId: jobId, action: "evidence_added", actorId: user.id, details: { fileName: attachment.name.slice(0, 180) } });
+    else recordActivity({ entityType: "service-job", entityId: jobId, action: "evidence_added", actorId: user.id, details: { fileName: attachment.name.slice(0, 180) } });
   } catch (error) {
     return { error: safeError(error, "Unable to save the job evidence.") };
   }
@@ -1987,8 +2101,13 @@ export async function verifyJobCompletionAction(jobId: string, _: ActionState, f
   const user = await requirePortalUser(["owner", "manager", "staff"]);
   try {
     const approve = text(formData, "decision") === "approve";
-    verifyJobCompletion({ jobId, reviewerId: user.id, approve, reason: optionalText(formData, "reason") });
-    recordActivity({ entityType: "service-job", entityId: jobId, action: approve ? "completion_verified" : "completion_returned", actorId: user.id });
+    if (isFirestorePortalBackend()) {
+      await verifyFirestoreJobCompletion({ jobId, reviewerId: user.id, approve, reason: optionalText(formData, "reason") });
+      await recordFirestoreActivity({ entityType: "service-job", entityId: jobId, action: approve ? "completion_verified" : "completion_returned", actorId: user.id });
+    } else {
+      verifyJobCompletion({ jobId, reviewerId: user.id, approve, reason: optionalText(formData, "reason") });
+      recordActivity({ entityType: "service-job", entityId: jobId, action: approve ? "completion_verified" : "completion_returned", actorId: user.id });
+    }
   } catch (error) {
     return { error: safeError(error, "Unable to review the completion record.") };
   }
@@ -2019,8 +2138,14 @@ export async function createPointRuleAction(_: ActionState, formData: FormData):
   try {
     const parsed = parsePointRuleForm(formData);
     if ("error" in parsed) return parsed;
-    insertPointRule({ id: newId(), ...parsed.input, actorId: user.id });
-    recordActivity({ entityType: "point-rule", entityId: parsed.input.name, action: "created", actorId: user.id });
+    const ruleId = newId();
+    if (isFirestorePortalBackend()) {
+      await saveFirestorePointRule({ id: ruleId, ...parsed.input, actorId: user.id });
+      await recordFirestoreActivity({ entityType: "point-rule", entityId: ruleId, action: "created", actorId: user.id });
+    } else {
+      insertPointRule({ id: ruleId, ...parsed.input, actorId: user.id });
+      recordActivity({ entityType: "point-rule", entityId: parsed.input.name, action: "created", actorId: user.id });
+    }
   } catch (error) { return { error: safeError(error, "Unable to create the SS Points rule.") }; }
   revalidatePath("/portal/points");
   redirect("/portal/points?saved=rule");
@@ -2031,7 +2156,8 @@ export async function updatePointRuleAction(ruleId: string, _: ActionState, form
   try {
     const parsed = parsePointRuleForm(formData);
     if ("error" in parsed) return parsed;
-    updatePointRule({ id: ruleId, ...parsed.input, actorId: user.id });
+    if (isFirestorePortalBackend()) await saveFirestorePointRule({ id: ruleId, ...parsed.input, actorId: user.id });
+    else updatePointRule({ id: ruleId, ...parsed.input, actorId: user.id });
   } catch (error) { return { error: safeError(error, "Unable to update the SS Points rule.") }; }
   revalidatePath("/portal/points");
   redirect("/portal/points?saved=rule");
@@ -2044,7 +2170,9 @@ export async function adjustPointsAction(_: ActionState, formData: FormData): Pr
     if (!Number.isInteger(points) || points === 0) return { error: "Enter a non-zero whole number of points." };
     const reason = text(formData, "reason");
     if (reason.length < 3) return { error: "Enter a reason for the adjustment." };
-    applyPointAdjustment({ id: newId(), technicianId: text(formData, "technicianId"), points, reason, actorId: user.id });
+    const transactionId = newId();
+    if (isFirestorePortalBackend()) await saveFirestorePointTransaction({ id: transactionId, technicianId: text(formData, "technicianId"), points, type: "admin-adjustment", reason, actorId: user.id });
+    else applyPointAdjustment({ id: transactionId, technicianId: text(formData, "technicianId"), points, reason, actorId: user.id });
   } catch (error) { return { error: safeError(error, "Unable to adjust SS Points.") }; }
   revalidatePath("/portal/points");
   redirect("/portal/points?saved=adjustment");
@@ -2062,14 +2190,14 @@ function parseRewardForm(formData: FormData) {
 
 export async function createRewardAction(_: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requirePortalUser(["owner"]);
-  try { const { input } = parseRewardForm(formData); const id = newId(); insertRewardItem({ id, ...input, actorId: user.id }); recordActivity({ entityType: "reward", entityId: id, action: "created", actorId: user.id }); } catch (error) { return { error: safeError(error, "Unable to create the reward.") }; }
+  try { const { input } = parseRewardForm(formData); const id = newId(); if (isFirestorePortalBackend()) { await saveFirestoreReward({ id, ...input, actorId: user.id }); await recordFirestoreActivity({ entityType: "reward", entityId: id, action: "created", actorId: user.id }); } else { insertRewardItem({ id, ...input, actorId: user.id }); recordActivity({ entityType: "reward", entityId: id, action: "created", actorId: user.id }); } } catch (error) { return { error: safeError(error, "Unable to create the reward.") }; }
   revalidatePath("/portal/rewards");
   redirect("/portal/rewards?saved=reward");
 }
 
 export async function updateRewardAction(rewardId: string, _: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requirePortalUser(["owner"]);
-  try { const { input } = parseRewardForm(formData); updateRewardItem({ id: rewardId, ...input, actorId: user.id }); } catch (error) { return { error: safeError(error, "Unable to update the reward.") }; }
+  try { const { input } = parseRewardForm(formData); if (isFirestorePortalBackend()) await saveFirestoreReward({ id: rewardId, ...input, actorId: user.id }); else updateRewardItem({ id: rewardId, ...input, actorId: user.id }); } catch (error) { return { error: safeError(error, "Unable to update the reward.") }; }
   revalidatePath("/portal/rewards");
   redirect("/portal/rewards?saved=reward");
 }
@@ -2079,10 +2207,13 @@ export async function requestRedemptionAction(rewardId: string, _: ActionState, 
   try {
     const quantity = Number(text(formData, "quantity"));
     if (!Number.isInteger(quantity) || quantity < 1) return { error: "Enter a valid quantity." };
-    const reward = getPortalDatabase().prepare("SELECT name, points_cost FROM reward_items WHERE id = ? LIMIT 1").get(rewardId) as { name: string; points_cost: number } | undefined;
-    if (!reward) return { error: "That reward no longer exists." };
     const id = newId();
-    requestRedemption({ id, reference: nextReference("redemption", "RDM"), technicianId: user.id, rewardId, rewardName: reward.name, pointsCost: reward.points_cost, quantity, notes: optionalText(formData, "notes") });
+    if (isFirestorePortalBackend()) await requestFirestoreRedemption({ id, reference: await fsNextReference("redemption", "RDM"), technicianId: user.id, rewardId, quantity, notes: optionalText(formData, "notes") });
+    else {
+      const reward = getPortalDatabase().prepare("SELECT name, points_cost FROM reward_items WHERE id = ? LIMIT 1").get(rewardId) as { name: string; points_cost: number } | undefined;
+      if (!reward) return { error: "That reward no longer exists." };
+      requestRedemption({ id, reference: nextReference("redemption", "RDM"), technicianId: user.id, rewardId, rewardName: reward.name, pointsCost: reward.points_cost, quantity, notes: optionalText(formData, "notes") });
+    }
   } catch (error) { return { error: safeError(error, "Unable to request the reward.") }; }
   revalidatePath("/portal/rewards");
   revalidatePath("/portal/redemptions");
@@ -2091,7 +2222,7 @@ export async function requestRedemptionAction(rewardId: string, _: ActionState, 
 
 export async function approveRedemptionAction(redemptionId: string, _: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requirePortalUser(["owner"]);
-  try { approveRedemption({ redemptionId, actorId: user.id, approve: text(formData, "decision") === "approve", reason: optionalText(formData, "reason") }); } catch (error) { return { error: safeError(error, "Unable to review the redemption.") }; }
+  try { if (isFirestorePortalBackend()) await approveFirestoreRedemption({ redemptionId, actorId: user.id, approve: text(formData, "decision") === "approve", reason: optionalText(formData, "reason") }); else approveRedemption({ redemptionId, actorId: user.id, approve: text(formData, "decision") === "approve", reason: optionalText(formData, "reason") }); } catch (error) { return { error: safeError(error, "Unable to review the redemption.") }; }
   revalidatePath("/portal/redemptions");
   revalidatePath("/portal/rewards");
   revalidatePath("/portal/points");
@@ -2100,7 +2231,7 @@ export async function approveRedemptionAction(redemptionId: string, _: ActionSta
 
 export async function updateRedemptionStatusAction(redemptionId: string, _: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requirePortalUser(["owner", "manager", "staff"]);
-  try { const status = z.enum(["ready", "collected", "cancelled"] as const).parse(text(formData, "status")); updateRedemptionStatus({ redemptionId, status, actorId: user.id, reason: optionalText(formData, "reason") }); } catch (error) { return { error: safeError(error, "Unable to update the redemption status.") }; }
+  try { const status = z.enum(["ready", "collected", "cancelled"] as const).parse(text(formData, "status")); if (isFirestorePortalBackend()) await updateFirestoreRedemptionStatus({ redemptionId, status, actorId: user.id, reason: optionalText(formData, "reason") }); else updateRedemptionStatus({ redemptionId, status, actorId: user.id, reason: optionalText(formData, "reason") }); } catch (error) { return { error: safeError(error, "Unable to update the redemption status.") }; }
   revalidatePath("/portal/redemptions");
   revalidatePath("/portal/rewards");
   redirect("/portal/redemptions?saved=status");
@@ -2108,7 +2239,8 @@ export async function updateRedemptionStatusAction(redemptionId: string, _: Acti
 
 export async function markNotificationReadAction(notificationId: string) {
   const user = await requirePortalUser();
-  markNotificationRead(notificationId, user.id);
+  if (isFirestorePortalBackend()) await markFirestoreNotificationRead(notificationId, user.id);
+  else markNotificationRead(notificationId, user.id);
   revalidatePath("/portal/dashboard");
 }
 
@@ -2139,11 +2271,12 @@ export async function revokePortalSessionForUser(userId: string) {
     const target = await getFirestorePortalUser(userId);
     if (!target) return { error: "That team member no longer exists." };
     await deactivateFirestorePortalUser(userId);
-    getPortalDatabase().prepare("UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?").run(nowIso(), userId);
+    if (getPortalDataBackend() !== "firestore") getPortalDatabase().prepare("UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?").run(nowIso(), userId);
   } else {
     getPortalDatabase().prepare("UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?").run(nowIso(), userId);
   }
-  recordActivity({ entityType: "user", entityId: userId, action: "deactivated", actorId: owner.id });
+  if (isFirestorePortalBackend()) await recordFirestoreActivity({ entityType: "user", entityId: userId, action: "deactivated", actorId: owner.id });
+  else recordActivity({ entityType: "user", entityId: userId, action: "deactivated", actorId: owner.id });
   revalidatePath("/portal/team");
   return { success: "Account deactivated." };
 }

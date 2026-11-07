@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   reactCompiler: true,
   experimental: {
+    cpus: 2,
     serverActions: {
       bodySizeLimit: "30mb",
     },

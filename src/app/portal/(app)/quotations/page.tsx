@@ -11,9 +11,7 @@ export const runtime = "nodejs";
 export default async function PortalQuotationsPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
   await requirePortalUser(["owner", "manager", "staff"]);
   const params = await searchParams;
-  const customers = getCustomers();
-  const projects = getProjects();
-  const quotations = getQuotations();
+  const [customers, projects, quotations] = await Promise.all([getCustomers(), getProjects(), getQuotations()]);
   const catalogProducts = getCatalogSnapshot().products;
 
   return (

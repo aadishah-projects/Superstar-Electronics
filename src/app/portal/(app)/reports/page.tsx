@@ -16,7 +16,7 @@ export default async function PortalReportsPage({ searchParams }: { searchParams
   const today = new Date().toISOString().slice(0, 10);
   const from = params.from && /^\d{4}-\d{2}-\d{2}$/.test(params.from) ? params.from : today.slice(0, 8) + "01";
   const to = params.to && /^\d{4}-\d{2}-\d{2}$/.test(params.to) ? params.to : today;
-  const summary = getReportSummary(`${from}T00:00:00.000Z`, `${addDays(to, 1)}T00:00:00.000Z`);
+  const summary = await getReportSummary(`${from}T00:00:00.000Z`, `${addDays(to, 1)}T00:00:00.000Z`);
 
   return (
     <div className="space-y-6">
@@ -28,9 +28,9 @@ export default async function PortalReportsPage({ searchParams }: { searchParams
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <ReportList title="Enquiries by source" rows={summary.enquiriesBySource.map((row) => ({ label: row.source, value: String(row.count) }))} empty="No enquiries in this period." />
-        <ReportList title="Projects by stage" rows={summary.projectsByStatus.map((row) => ({ label: row.status.replaceAll("-", " "), value: String(row.count) }))} empty="No projects in this period." />
-        <ReportList title="Support tickets by status" rows={summary.ticketsByStatus.map((row) => ({ label: row.status.replaceAll("-", " "), value: String(row.count) }))} empty="No tickets in this period." />
+        <ReportList title="Enquiries by source" rows={summary.enquiriesBySource.map((row) => ({ label: String(row.source), value: String(row.count) }))} empty="No enquiries in this period." />
+        <ReportList title="Projects by stage" rows={summary.projectsByStatus.map((row) => ({ label: String(row.status).replaceAll("-", " "), value: String(row.count) }))} empty="No projects in this period." />
+        <ReportList title="Support tickets by status" rows={summary.ticketsByStatus.map((row) => ({ label: String(row.status).replaceAll("-", " "), value: String(row.count) }))} empty="No tickets in this period." />
         <ReportList title="Payments by method" rows={summary.paymentsByMethod.map((row) => ({ label: row.method.replace("fonepay", "Fonepay QR"), value: `${formatPortalNpr(row.total)} · ${row.count} ${row.count === 1 ? "payment" : "payments"}` })).concat(summary.totals.paymentAdjustments ? [{ label: "Refunds / reversals", value: `-${formatPortalNpr(summary.totals.paymentAdjustments)}` }] : [])} empty="No payments in this period." />
         <ReportList title="Technician workload" rows={summary.staffWorkload.map((row) => ({ label: row.name, value: `${row.count} scheduled` }))} empty="No assigned work in this period." />
       </div>

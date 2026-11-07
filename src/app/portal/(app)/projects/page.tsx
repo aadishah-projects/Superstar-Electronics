@@ -9,8 +9,7 @@ export const runtime = "nodejs";
 export default async function PortalProjectsPage({ searchParams }: { searchParams: Promise<{ saved?: string; q?: string; status?: string }> }) {
   await requirePortalUser();
   const params = await searchParams;
-  const customers = getCustomers();
-  const projects = getProjects({ search: params.q, status: params.status });
+  const [customers, projects] = await Promise.all([getCustomers(), getProjects({ search: params.q, status: params.status })]);
 
   return (
     <div className="space-y-6">

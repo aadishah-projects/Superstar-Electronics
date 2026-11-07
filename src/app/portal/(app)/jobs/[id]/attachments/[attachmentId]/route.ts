@@ -10,10 +10,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const user = await getCurrentPortalUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
   const { id, attachmentId } = await params;
-  const job = getServiceJob(id);
-  const attachment = getJobAttachment(attachmentId);
+  const [job, attachment] = await Promise.all([getServiceJob(id), getJobAttachment(attachmentId)]);
   if (!job || !attachment || attachment.job_id !== id) return new Response("Not found", { status: 404 });
-  if (user.role === "technician" && !getServiceJobs({ role: "technician", userId: user.id }).some((item) => item.id === id)) return new Response("Forbidden", { status: 403 });
+  if (user.role === "technician" && !(await getServiceJobs({ role: "technician", userId: user.id })).some((item) => item.id === id)) return new Response("Forbidden", { status: 403 });
 
   const r2Key = getR2KeyFromStoredName(attachment.stored_name);
   if (r2Key) {

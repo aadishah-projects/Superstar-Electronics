@@ -13,15 +13,11 @@ export default async function PortalJobDetailPage({ params, searchParams }: { pa
   const user = await requirePortalUser();
   const { id } = await params;
   const query = await searchParams;
-  const job = getServiceJob(id);
+  const job = await getServiceJob(id);
   if (!job) notFound();
-  if (user.role === "technician" && !getServiceJobs({ role: "technician", userId: user.id }).some((item) => item.id === id)) notFound();
+  if (user.role === "technician" && !(await getServiceJobs({ role: "technician", userId: user.id })).some((item) => item.id === id)) notFound();
   const mapUrl = getJobMapUrl(job);
-  const responses = user.role === "technician" ? [] : getJobResponses(id);
-  const assignments = user.role === "technician" ? [] : getJobAssignments(id);
-  const completion = getJobCompletion(id);
-  const attachments = getJobAttachments(id);
-  const technicians = user.role === "technician" ? [] : getTechnicians();
+  const [responses, assignments, completion, attachments, technicians] = await Promise.all([user.role === "technician" ? Promise.resolve([]) : getJobResponses(id), user.role === "technician" ? Promise.resolve([]) : getJobAssignments(id), getJobCompletion(id), getJobAttachments(id), user.role === "technician" ? Promise.resolve([]) : getTechnicians()]);
   const isAssignedTechnician = user.role === "technician" && job.assignedTechnicianId === user.id;
 
   return <div className="space-y-6">

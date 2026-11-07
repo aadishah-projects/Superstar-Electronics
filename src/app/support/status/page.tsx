@@ -15,7 +15,7 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function SupportStatusPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const params = await searchParams;
-  const ticket = params.token ? getPublicSupportTicket(hashToken(params.token)) : undefined;
+  const ticket = params.token ? await getPublicSupportTicket(hashToken(params.token)) : undefined;
 
   return (
     <section className="page-section pt-10 sm:pt-14">

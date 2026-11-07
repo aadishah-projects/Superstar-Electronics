@@ -34,8 +34,7 @@ export default async function PortalJobsPage({ searchParams }: { searchParams: P
   const user = await requirePortalUser();
   const params = await searchParams;
   const view = params.view === "list" || params.view === "calendar" ? params.view : "kanban";
-  const jobs = getServiceJobs({ role: user.role, userId: user.id });
-  const customers = user.role === "technician" ? [] : getCustomers();
+  const [jobs, customers] = await Promise.all([getServiceJobs({ role: user.role, userId: user.id }), user.role === "technician" ? Promise.resolve([]) : getCustomers()]);
   const activeJobs = jobs.filter((job) => !["completed", "cancelled", "expired"].includes(job.status));
   const completedJobs = jobs.filter((job) => job.status === "completed");
   const hiddenClosedJobs = jobs.filter((job) => job.status === "cancelled" || job.status === "expired");

@@ -19,10 +19,8 @@ export default async function PortalSchedulePage({ searchParams }: { searchParam
   const fromDate = params.from && /^\d{4}-\d{2}-\d{2}$/.test(params.from) ? params.from : getPortalToday();
   const days = params.view === "day" ? 1 : 7;
   const toDate = addDays(fromDate, days);
-  const events = getScheduleEvents({ from: `${fromDate}T00:00`, to: `${toDate}T00:00`, assignedTo: user.role === "technician" ? user.id : undefined });
-  const users = getActiveUsers().filter((member) => member.isActive);
-  const projects = user.role === "technician" ? [] : getProjects();
-  const tickets = user.role === "technician" ? [] : getServiceTickets();
+  const [events, activeUsers, projects, tickets] = await Promise.all([getScheduleEvents({ from: `${fromDate}T00:00`, to: `${toDate}T00:00`, assignedTo: user.role === "technician" ? user.id : undefined }), getActiveUsers(), user.role === "technician" ? Promise.resolve([]) : getProjects(), user.role === "technician" ? Promise.resolve([]) : getServiceTickets()]);
+  const users = activeUsers.filter((member) => member.isActive);
 
   return (
     <div className="space-y-6">

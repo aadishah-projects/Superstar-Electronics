@@ -11,8 +11,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   if (!user) return new Response("Unauthorized", { status: 401 });
 
   const { id, attachmentId } = await params;
-  const ticket = getServiceTicket(id);
-  const attachment = getTicketAttachment(attachmentId);
+  const [ticket, attachment] = await Promise.all([getServiceTicket(id), getTicketAttachment(attachmentId)]);
   if (!ticket || !attachment || attachment.ticket_id !== id) return new Response("Not found", { status: 404 });
   if (user.role === "technician" && ticket.assignedTo !== user.id) return new Response("Forbidden", { status: 403 });
 

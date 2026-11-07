@@ -26,10 +26,7 @@ const metricStyles = [
 export default async function PortalDashboardPage({ searchParams }: { searchParams: Promise<{ error?: string; saved?: string }> }) {
   const user = await requirePortalUser();
   ensureDueFollowUpNotifications();
-  const metrics = getDashboardMetrics();
-  const activity = getActivityFeed();
-  const notifications = getNotifications(user.id);
-  const jobs = getServiceJobs({ role: user.role, userId: user.id });
+  const [metrics, activity, notifications, jobs] = await Promise.all([getDashboardMetrics(), getActivityFeed(), getNotifications(user.id), getServiceJobs({ role: user.role, userId: user.id })]);
   const params = await searchParams;
   const activeJobs = jobs.filter((job) => !["completed", "cancelled", "expired"].includes(job.status));
   const dispatchJobs = activeJobs.slice(0, 4);
@@ -91,7 +88,7 @@ export default async function PortalDashboardPage({ searchParams }: { searchPara
 
         <section className="rounded-xl border border-[#e0e7f0] bg-white p-5 shadow-[0_6px_24px_rgba(20,67,125,0.035)]">
           <div className="flex items-start justify-between"><div><p className="text-[0.64rem] font-bold uppercase tracking-[0.16em] text-[#8b98aa]">Timeline</p><h2 className="mt-1 font-heading text-lg font-semibold text-[#1d2b3e]">Recent activity</h2></div><Link href="/portal/reports" className="text-[0.7rem] font-semibold text-[#1463d7]">Reports</Link></div>
-          {activity.length ? <div className="mt-4 space-y-3">{activity.slice(0, 5).map((item, index) => <div key={`${item.created_at}-${index}`} className="flex gap-3"><span className="mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#eef5ff] text-[#1463d7]"><PortalIcon name="check" className="h-3.5 w-3.5" /></span><div className="min-w-0"><p className="truncate text-[0.73rem] font-semibold capitalize text-[#34465c]">{item.action.replaceAll("_", " ")}</p><p className="mt-0.5 truncate text-[0.64rem] text-[#9aa5b4]">{item.actor_name} · {formatPortalDateTime(item.created_at)}</p></div></div>)}</div> : <p className="mt-5 text-sm text-[#8b98aa]">Activity will appear as the team works.</p>}
+          {activity.length ? <div className="mt-4 space-y-3">{activity.slice(0, 5).map((item, index) => <div key={`${item.createdAt}-${index}`} className="flex gap-3"><span className="mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#eef5ff] text-[#1463d7]"><PortalIcon name="check" className="h-3.5 w-3.5" /></span><div className="min-w-0"><p className="truncate text-[0.73rem] font-semibold capitalize text-[#34465c]">{item.action.replaceAll("_", " ")}</p><p className="mt-0.5 truncate text-[0.64rem] text-[#9aa5b4]">{item.actorName} · {formatPortalDateTime(item.createdAt)}</p></div></div>)}</div> : <p className="mt-5 text-sm text-[#8b98aa]">Activity will appear as the team works.</p>}
         </section>
 
         <section className="rounded-xl border border-[#e0e7f0] bg-white p-5 shadow-[0_6px_24px_rgba(20,67,125,0.035)]">

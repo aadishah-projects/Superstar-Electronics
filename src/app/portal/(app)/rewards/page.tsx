@@ -8,8 +8,7 @@ export const runtime = "nodejs";
 
 export default async function PortalRewardsPage() {
   const user = await requirePortalUser();
-  const rewards = getRewardItems(user.role === "owner" || user.role === "manager" || user.role === "staff");
-  const balance = user.role === "technician" ? getPointBalance(user.id) : null;
+  const [rewards, balance] = await Promise.all([getRewardItems(user.role === "owner" || user.role === "manager" || user.role === "staff"), user.role === "technician" ? getPointBalance(user.id) : Promise.resolve(null)]);
 
   return <div className="space-y-6">
     <PortalPageHeader eyebrow="Technician rewards" title="Rewards store" description={user.role === "technician" ? "Choose a reward with your SS Points." : "Keep the reward catalogue visual, compact, and ready for approval."} />

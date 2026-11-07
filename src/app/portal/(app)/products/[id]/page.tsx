@@ -13,9 +13,9 @@ export default async function PortalProductDetailPage({ params, searchParams }: 
   await requirePortalUser(["owner", "manager"]);
   const { id } = await params;
   const query = await searchParams;
-  const product = getProduct(id);
+  const product = await getProduct(id);
   if (!product) notFound();
-  const history = getProductPriceHistory(id);
+  const history = await getProductPriceHistory(id);
 
   return (
     <div className="space-y-6">

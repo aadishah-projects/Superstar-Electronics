@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 export default async function PortalTeamPage() {
   await requirePortalUser(["owner"]);
-  const users = getActiveUsers();
+  const users = await getActiveUsers();
 
   return (
     <div className="space-y-6">

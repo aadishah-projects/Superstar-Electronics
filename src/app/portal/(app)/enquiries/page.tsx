@@ -9,8 +9,8 @@ export const runtime = "nodejs";
 export default async function PortalEnquiriesPage({ searchParams }: { searchParams: Promise<{ saved?: string; q?: string; status?: string }> }) {
   await requirePortalUser(["owner", "manager", "staff"]);
   const params = await searchParams;
-  const enquiries = getEnquiries({ search: params.q, status: params.status });
-  const users = getActiveUsers().filter((user) => user.isActive);
+  const [enquiries, activeUsers] = await Promise.all([getEnquiries({ search: params.q, status: params.status }), getActiveUsers()]);
+  const users = activeUsers.filter((user) => user.isActive);
 
   return (
     <div className="space-y-6">

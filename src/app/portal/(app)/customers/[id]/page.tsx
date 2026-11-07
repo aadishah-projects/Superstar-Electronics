@@ -11,9 +11,9 @@ export default async function PortalCustomerDetailPage({ params, searchParams }:
   const user = await requirePortalUser();
   const { id } = await params;
   const query = await searchParams;
-  const customer = getCustomer(id);
+  const customer = await getCustomer(id);
   if (!customer) notFound();
-  const activities = getEntityActivity("customer", customer.id);
+  const activities = await getEntityActivity("customer", customer.id);
 
   return (
     <div className="space-y-6">

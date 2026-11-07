@@ -13,15 +13,10 @@ export default async function PortalProjectDetailPage({ params, searchParams }: 
   const user = await requirePortalUser();
   const { id } = await params;
   const query = await searchParams;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) notFound();
-  const activities = getEntityActivity("project", project.id);
-  const quotations = getQuotations(project.id);
-  const payments = getPayments(project.id);
-  const paymentAdjustments = getPaymentAdjustments(project.id);
-  const installationItems = getInstallationItems(project.id);
-  const surveys = getSiteSurveys(project.id);
-  const surveyUsers = getActiveUsers().filter((member) => member.isActive);
+  const [activities, quotations, payments, paymentAdjustments, installationItems, surveys, activeUsers] = await Promise.all([getEntityActivity("project", project.id), getQuotations(project.id), getPayments(project.id), getPaymentAdjustments(project.id), getInstallationItems(project.id), getSiteSurveys(project.id), getActiveUsers()]);
+  const surveyUsers = activeUsers.filter((member) => member.isActive);
   const commercialTotal = project.approvedAmount ?? project.estimatedAmount;
   const balance = commercialTotal === null ? null : Math.max(commercialTotal - project.amountPaid, 0);
   const today = getPortalToday();
